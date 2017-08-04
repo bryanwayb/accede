@@ -84,6 +84,50 @@ module.exports = {
                     test.done();
                 });
             }
+        },
+        'promise': {
+            'single': function (test) {
+                accede.async.defer(new Promise((resolve) => {
+                    resolve(true);
+                })).then((results) => {
+                    test.ok(results[0]);
+                    test.done();
+                });
+            },
+            'multiple': function (test) {
+                accede.async.defer(new Promise((resolve) => {
+                    resolve(true);
+                }),
+                new Promise((resolve) => {
+                    resolve(false);
+                }),
+                new Promise((resolve) => {
+                    resolve(true);
+                })).then((results) => {
+                    test.ok(results[0]);
+                    test.ok(!results[1]);
+                    test.ok(results[2]);
+                    test.done();
+                });
+            }
+        },
+        'null': async function(test) {
+            accede.async.defer(null).then(() => {
+                test.ok(false, 'Promise was not rejected');
+                test.done();
+            }, () => {
+                test.ok(true);
+                test.done();
+            });
+        },
+        'empty': function(test) {
+            accede.async.defer().then(() => {
+                test.ok(true);
+                test.done();
+            }).catch((ex) => {
+                test.ok(false, ex);
+                test.done();
+            });
         }
     }
 }

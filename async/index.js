@@ -32,37 +32,42 @@ class Async {
                 length = callbacks.length,
                 data = new Array(callbacks.length);
 
-            function checkResolve() {
-                if(++count === length) {
-                    resolve(data);
+            if(length) {
+                function checkResolve() {
+                    if(++count === length) {
+                        resolve(data);
+                    }
+                }
+
+                for(let i = 0; i < length; i++) {
+                    let _i = i;
+
+                    if(Async.isPromise(callbacks[i])) {
+                        callbacks[i].then((results) => {
+                            data[_i] = results;
+                            checkResolve();
+                        }).catch(reject);
+                    }
+                    else if(typeof callbacks[i] === 'function') {
+                        new Promise((resolve, reject) => {
+                            try {
+                                callbacks[i]((results) => {
+                                    data[_i] = results;
+                                    checkResolve();
+                                });
+                            }
+                            catch(ex) {
+                                reject(ex);
+                            }
+                        }).catch(reject);
+                    }
+                    else {
+                        reject(new Error(`Invalid object with the type ${typeof callbacks[i]} was passed`));
+                    }
                 }
             }
-
-            for(let i = 0; i < length; i++) {
-                let _i = i;
-
-                if(Async.isPromise(callbacks[i])) {
-                    callbacks[i].then((results) => {
-                        data[_i] = results;
-                        checkResolve();
-                    }).catch(reject);
-                }
-                else if(typeof callbacks[i] === 'function') {
-                    new Promise((resolve, reject) => {
-                        try {
-                            callbacks[i]((results) => {
-                                data[_i] = results;
-                                checkResolve();
-                            });
-                        }
-                        catch(ex) {
-                            reject(ex);
-                        }
-                    }).catch(reject);
-                }
-                else {
-                    reject(new Error(`Invalid object with the type ${typeof callbacks[i]} was passed`));
-                }
+            else {
+                resolve(data);
             }
         });
     }
