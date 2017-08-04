@@ -1,0 +1,19 @@
+{
+  "name": "accede",
+  "version": "0.0.1",
+  "description": "The Accede library",
+  "main": "index.js",
+  "scripts": {
+    "test": "node ./test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://bryanwayb@bitbucket.org/bryanwayb/accede.git"
+  },
+  "author": "Bryan Way",
+  "license": "MIT",
+  "homepage": "https://bitbucket.org/bryanwayb/accede#readme",
+  "devDependencies": {
+    "nodeunit": "^0.11.1"
+  }
+}
