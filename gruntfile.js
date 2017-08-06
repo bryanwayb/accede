@@ -39,7 +39,6 @@ module.exports = function (grunt) {
         babel: {
             options: {
                 presets: ['es2015', 'es2017'],
-                plugins: ['transform-regenerator'],
                 sourceMaps: 'inline'
             },
             test: {

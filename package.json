@@ -1,6 +1,6 @@
 {
   "name": "accede",
-  "version": "0.0.1",
+  "version": "0.0.1-alpha-0",
   "description": "The Accede library",
   "main": "index.js",
   "scripts": {
