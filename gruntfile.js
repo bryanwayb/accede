@@ -26,7 +26,7 @@ module.exports = function (grunt) {
             test: {
                 files: {
                     'test/phantomjs/test.js': [
-                        'test.js'
+                        'test-browser.js'
                     ]
                 }
             },
@@ -64,7 +64,7 @@ module.exports = function (grunt) {
         },
         nodeunit: {
             test: {
-                src: 'test.js'
+                src: 'test-node.js'
             },
             options: {
                 reporter: 'default'
@@ -73,7 +73,10 @@ module.exports = function (grunt) {
     });
 
     grunt.task.registerTask('dev', ['clean:dist', 'browserify:dist']);
-    grunt.task.registerTask('test', ['clean:test', 'nodeunit:test', 'browserify:test', 'babel:test', 'shell:test']);
+    grunt.task.registerTask('test', ['test:build', 'test:transpile', 'test:run']);
+    grunt.task.registerTask('test:build', ['clean:test', 'browserify:test']);
+    grunt.task.registerTask('test:transpile', ['babel:test']);
+    grunt.task.registerTask('test:run', ['nodeunit:test', 'shell:test']);
 
     // grunt.task.registerTask('default', ['bgShell:dev', 'watch:dev']);
 
