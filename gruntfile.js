@@ -8,7 +8,7 @@ module.exports = function (grunt) {
         env: {
             bin: {
                 PATH: () => {
-                    return `${path.resolve(__dirname, './node_modules/.bin')}${/^win/.test(process.platform) ? ';' : ':'}${process.env.PATH}`;
+                    return `${process.env.PATH}${/^win/.test(process.platform) ? ';' : ':'}${path.resolve(__dirname, './node_modules/.bin')}`;
                 }
             }
         },
