@@ -20,7 +20,7 @@ class Async {
             id = setTimeout(() => {
                 callback.apply(this, args);
                 complete = true;
-        }, 0);
+            }, 0);
 
         return () => {
             if(!complete) {

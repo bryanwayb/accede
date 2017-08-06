@@ -17,6 +17,19 @@ if(process.mainModule != null && path.basename(__filename) != path.basename(proc
 else { // Otherwise run them
     const nodeunit = require('nodeunit');
 
+    if(!isBrowser) {
+        const jsdom = require("jsdom"),
+            currentDOM = new jsdom.JSDOM();
+        
+        global.window = currentDOM.window;
+
+        for(let i in currentDOM.window) {
+            if(global[i] === undefined) {
+                global[i] = currentDOM.window[i];
+            }
+        }
+    }
+
     nodeunit.runModules(tests, {
         moduleStart: function (name) {
             console.log(name.toString());
@@ -29,7 +42,7 @@ else { // Otherwise run them
         },
         done: function (assertions) {
             let success = assertions.failures() == 0;
-            
+
             if(isBrowser) {
                 if(typeof window.callPhantom === 'function') {
                     window.callPhantom(success ? 0 : 1);
