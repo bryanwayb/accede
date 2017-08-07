@@ -103,42 +103,44 @@ class Async {
         return data;
     }
 
-    static until(callback) {
+    static async until(callback) {
         let p = callback;
 
         if(!Async.isPromise(callback)) {
             if(typeof callback === 'function') {
-                p = new Promise((resolve) => {
-                    callback(resolve);
-                });
+                if(Async.isAsyncFunction(callback)) {
+                    p = callback();
+                }
+                else {
+                    p = new Promise((resolve) => {
+                        callback(resolve);
+                    });
+                }
             }
             else {
-                throw new Error(`Invalid object with the type ${typeof callbacks[i]} was passed`);
+                throw new Error(`Invalid object with the type ${typeof callback} was passed`);
             }
         }
 
-        let resolvedMethod;
+        let resolved = null;
 
         return async (...args) => {
-            if(!resolvedMethod) {
-                resolvedMethod = await p;
-
-                if(typeof resolvedMethod !== 'function') {
-                    throw new Error(`Invalid object with the type ${typeof resolvedMethod} was resolved`);
-                }
+            if(!resolved) {
+                resolved = await p;
             }
 
             let ret = null;
 
-            if(!Async.isPromise(resolvedMethod)) {
-                if(!Async.isAsyncFunction(resolvedMethod)) {
-                    ret = await resolvedMethod.apply(this, args);
-                }
-                else {
-                    ret = await new Promise((resolve) => {
-                        resolve(resolvedMethod.apply(this, args));
-                    });
-                }
+            if(Async.isAsyncFunction(resolved)) {
+                ret = await resolved.apply(this, args);
+            }
+            else if(typeof resolved === 'function') {
+                ret = await new Promise((resolve) => {
+                    resolve(resolved.apply(this, args));
+                });
+            }
+            else {
+                throw new Error(`Invalid object with the type ${typeof resolved} was resolved`);
             }
 
             return ret;

@@ -2,5 +2,6 @@
 
 module.exports = {
     async: require('./async'),
-    ui: require('./ui')
+    ui: require('./ui'),
+    utils: require('./utils')
 };

@@ -324,5 +324,107 @@ module.exports = {
                 test.done();
             });
         }
+    },
+    'until': {
+        'setup': {
+            'function': async function (test) {
+                let method = await accede.async.until((done) => {
+                    done(() => {
+                        return true;
+                    });
+                });
+
+                test.ok(await method() === true);
+
+                test.done();
+            },
+            'async function': async function (test) {
+                let method = await accede.async.until(async (done) => {
+                    return await accede.async.fromResult(() => {
+                        return true;
+                    });
+                });
+
+                test.ok(await method() === true);
+
+                test.done();
+            },
+            'promise': async function (test) {
+                let method = await accede.async.until(new Promise((resolve) => {
+                    resolve(() => {
+                        return true;
+                    });
+                }));
+
+                test.ok(await method() === true);
+
+                test.done();
+            },
+            'null': function (test) {
+                accede.async.until(null).then(() => {
+                    test.ok(false, 'Passing a null value should reject the Promise');
+                    test.done();
+                }).catch(ex => {
+                    test.ok(true);
+                    test.done();
+                });
+            },
+            'empty': async function (test) {
+                accede.async.until(null).then(() => {
+                    test.ok(false, 'Not passing a valid value should reject the Promise');
+                    test.done();
+                }).catch(ex => {
+                    test.ok(true);
+                    test.done();
+                });
+            }
+        },
+        'resolved': {
+            'async function': async function (test) {
+                let method = await accede.async.until(async () => {
+                    return await accede.async.fromResult(async () => {
+                        return true;
+                    });
+                });
+
+                test.ok(await method() === true);
+
+                test.done();
+            },
+            'null': async function (test) {
+                let method = await accede.async.until(async (done) => {
+                    return await accede.async.fromResult(new Promise((resolve) => {
+                        resolve(null);
+                    }));
+                });
+
+                try {
+                    await method();
+                    test.ok(false, 'The resolved Promise should have been rejected');
+                }
+                catch(ex) {
+                    test.ok(true);
+                }
+
+                test.done();
+            },
+            'empty': async function (test) {
+                let method = await accede.async.until(async (done) => {
+                    return await accede.async.fromResult(new Promise((resolve) => {
+                        resolve(null);
+                    }));
+                });
+
+                try {
+                    await method();
+                    test.ok(false, 'The resolved Promise should have been rejected');
+                }
+                catch(ex) {
+                    test.ok(true);
+                }
+
+                test.done();
+            }
+        }
     }
 }
