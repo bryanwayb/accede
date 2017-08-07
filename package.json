@@ -14,11 +14,7 @@
   "license": "MIT",
   "homepage": "https://bitbucket.org/bryanwayb/accede#readme",
   "devDependencies": {
-    "babel-polyfill": "^6.23.0",
-    "babel-preset-es2015": "^6.24.1",
-    "babel-preset-es2017": "^6.24.1",
     "grunt": "^1.0.1",
-    "grunt-babel": "^6.0.0",
     "grunt-browserify": "^5.0.0",
     "grunt-contrib-clean": "^1.1.0",
     "grunt-contrib-nodeunit": "^1.0.0",
@@ -26,8 +22,10 @@
     "grunt-shell": "^2.1.0",
     "jquery": "^3.2.1",
     "jsdom": "^11.1.0",
+    "karma": "^1.7.0",
+    "karma-chrome-launcher": "^2.2.0",
+    "karma-nodeunit": "^0.2.0",
     "load-grunt-tasks": "^3.5.2",
-    "nodeunit": "^0.11.1",
-    "phantomjs-prebuilt": "^2.1.14"
+    "nodeunit": "^0.11.1"
   }
 }

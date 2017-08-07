@@ -13,7 +13,7 @@ module.exports = function (grunt) {
             }
         },
         shell: {
-            'test': 'phantomjs ./test/phantomjs/index.js'
+            'test': 'karma start --single-run --browsers ChromeHeadless karma.config.js'
         },
         browserify: {
             dist: {
@@ -25,7 +25,7 @@ module.exports = function (grunt) {
             },
             test: {
                 files: {
-                    'test/phantomjs/test.js': [
+                    'temp/test.js': [
                         'test-browser.js'
                     ]
                 }
@@ -33,17 +33,6 @@ module.exports = function (grunt) {
             options: {
                 browserifyOptions: {
                     debug: true
-                }
-            }
-        },
-        babel: {
-            options: {
-                presets: ['es2015', 'es2017'],
-                sourceMaps: 'inline'
-            },
-            test: {
-                files: {
-                    './test/phantomjs/test.js': './test/phantomjs/test.js'
                 }
             }
         },
@@ -56,9 +45,14 @@ module.exports = function (grunt) {
                     'dist'
                 ]
             },
+            temp: {
+                src: [
+                    'temp'
+                ]
+            },
             test: {
                 src: [
-                    'test/phantomjs/test.js'
+                    'temp/test.js'
                 ]
             }
         },
@@ -73,10 +67,9 @@ module.exports = function (grunt) {
     });
 
     grunt.task.registerTask('dev', ['clean:dist', 'browserify:dist']);
-    grunt.task.registerTask('test', ['test:build', 'test:transpile', 'test:run']);
+    grunt.task.registerTask('test', ['test:build', 'test:run', 'clean:temp']);
     grunt.task.registerTask('test:build', ['clean:test', 'browserify:test']);
-    grunt.task.registerTask('test:transpile', ['babel:test']);
-    grunt.task.registerTask('test:run', ['nodeunit:test', 'shell:test']);
+    grunt.task.registerTask('test:run', ['nodeunit:test', 'env:bin', 'shell:test']);
 
     // grunt.task.registerTask('default', ['bgShell:dev', 'watch:dev']);
 

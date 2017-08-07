@@ -11,6 +11,18 @@ class Async {
         return obj != null && Object.getPrototypeOf(obj).constructor === asyncFunctionConstructor;
     }
 
+    static async fromResult(obj) {
+        return obj;
+    }
+
+    static delay(timeout) {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve();
+            }, timeout);
+        });
+    }
+
     static call(callback, ...args) {
         if(typeof callback !== 'function') {
             throw new Error('Invalid parameter passed, expecting a function type');
@@ -42,9 +54,14 @@ class Async {
                 promises[i] = callbacks[i];
             }
             else if(typeof callbacks[i] === 'function') {
-                promises[i] = new Promise((resolve) => {
-                    callbacks[i](resolve);
-                });
+                if(Async.isAsyncFunction(callbacks[i])) {
+                    promises[i] = callbacks[i]();
+                }
+                else {
+                    promises[i] = new Promise((resolve) => {
+                        callbacks[i](resolve);
+                    });
+                }
             }
             else {
                 throw new Error(`Invalid object with the type ${typeof callbacks[i]} was passed`);
@@ -69,9 +86,14 @@ class Async {
                 data[i] = await callbacks[i];
             }
             else if (typeof callbacks[i] === 'function') {
-                data[i] = await new Promise((resolve) => {
-                    callbacks[i](resolve);
-                });
+                if(Async.isAsyncFunction(callbacks[i])) {
+                    data[i] = await callbacks[i]();
+                }
+                else {
+                    data[i] = await new Promise((resolve) => {
+                        callbacks[i](resolve);
+                    });
+                }
             }
             else {
                 throw new Error(`Invalid object with the type ${typeof callbacks[i]} was passed`);
