@@ -47,11 +47,13 @@ module.exports = {
 
         let success = true;
 
+        let p = accede.async.delay(1);
+
         setTimeout(() => {
             success = false;
-        }, 10);
+        }, 2);
 
-        await accede.async.delay(1);
+        await p;
 
         test.ok(success); // Should still be true by this point
 

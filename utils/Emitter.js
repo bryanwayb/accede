@@ -1,55 +1,68 @@
 'use strict';
 
-class Emitter {
-    on(name, callback) {
-        this.count(name, null, callback);
+const IndexedStack = require('./IndexedStack'),
+    async = require('../async');
+
+function getEventStack(context, name) {
+    let eventContext = context._eventContext;
+    if(eventContext == null) {
+        context._eventContext = eventContext = {};
     }
 
-    count(name, count, callback) {
-        let eventStack = this.eventStack;
+    let eventStack = eventContext[name];
+    if(eventStack == null) {
+        eventContext[name] = eventStack = new IndexedStack();
+    }
 
-        if(eventStack == null) {
-            this.eventStack = eventStack = {};
+    return eventStack;
+}
+
+class Emitter {
+    counter(name, count, callback) {
+        if(typeof callback !== 'function') {
+            throw new Error('Invalid parameter passed, expecting a function type');
+        }
+        else if(async.isAsyncFunction(callback)) {
+            throw new Error('Only synchronous functions are allowed as event callbacks');
         }
 
-        if(eventStack[name] == null) {
-            eventStack[name] = [];
-        }
-
-        eventStack[name].push({
+        return getEventStack(this, name).insert({
             count: count,
             callback: callback
         });
     }
 
+    on(name, callback) {
+        return this.counter(name, null, callback);
+    }
+
     one(name, callback) {
-        this.count(name, 1, callback);
+        return this.counter(name, 1, callback);
+    }
+
+    off(name, index) {
+        return getEventStack(this, name).remove(index);
     }
 
     emit(name, ...args) {
         let errors = [];
 
-        if(this.eventStack != null && this.eventStack[name]) {
-            let callbacks = this.eventStack[name];
+        let eventStack = getEventStack(this, name);
 
-            for(let i = 0; i < callbacks.length; i++) {
-                let entry = callbacks[i],
-                    callback = entry.callback;
-                if(entry.count != null) {
-                    entry.count--;
+        for(let i = 0; i < eventStack.indexes.length; i++) {
+            let index = eventStack.indexes[i],
+                entry = eventStack.stack[index];
 
-                    if(entry.count <= 0) {
-                        callbacks.splice(i, 1);
-                        i--;
-                    }
-                }
+            if(entry.count !== null
+                && --entry.count <= 0) {
+                    eventStack.removePosition(i--, index);
+            }
 
-                try {
-                    callback.apply(this, args);
-                }
-                catch(ex) {
-                    errors.push(ex);
-                }
+            try {
+                entry.callback.apply(this, args);
+            }
+            catch(ex) {
+                errors.push(ex);
             }
         }
 

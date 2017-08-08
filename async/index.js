@@ -68,13 +68,7 @@ class Async {
             }
         }
 
-        let data = new Array(length);
-
-        for(i = 0; i < length; i++) {
-            data[i] = await promises[i];
-        }
-        
-        return data;
+        return await Promise.all(promises);
     }
 
     static async chain(...callbacks) {

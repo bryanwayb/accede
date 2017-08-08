@@ -1,3 +1,4 @@
 module.exports = {
-    async: require('./async.js')
+    async: require('./async'),
+    utils: require('./utils')
 };
