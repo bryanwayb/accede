@@ -15,13 +15,14 @@ class IndexedStack {
     }
 
     remove(index) {
-        return this.removePosition(this.indexes.indexOf(index), index);
+        return this.removePosition(this.indexes.indexOf(index));
     }
 
-    removePosition(pos, index = this.indexes[pos]) {
+    removePosition(pos) {
         let ret = false;
 
         if(pos !== -1) {
+            let index = this.indexes[pos];
             if((ret = delete this.stack[index])) {
                 this.indexes.splice(pos, 1);
             }

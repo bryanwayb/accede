@@ -55,7 +55,7 @@ class Emitter {
 
             if(entry.count !== null
                 && --entry.count <= 0) {
-                    eventStack.removePosition(i--, index);
+                    eventStack.removePosition(i--);
             }
 
             try {
