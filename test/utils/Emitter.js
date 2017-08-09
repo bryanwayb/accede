@@ -142,5 +142,44 @@ module.exports = {
 
             test.done();
         }
+    },
+    'removing listeners': (test) => {
+        test.doesNotThrow(() => {
+            let instance = new Emitter();
+
+            let listenerId = instance.on('testing', () => {
+                throw new Error('I should never get thrown');
+            });
+
+            test.ok(instance.off('testing', listenerId));
+
+            instance.emit('testing');
+        }, 'Failed to remove event listener');
+
+        test.doesNotThrow(() => {
+            let instance = new Emitter(),
+                count = 0;
+
+            instance.on('testing', () => {
+                count++;
+            });
+
+            let listenerId = instance.on('testing', () => {
+                throw new Error('I should never get thrown');
+            });
+
+            instance.on('testing', () => {
+                count++;
+            });
+
+            test.ok(instance.off('testing', listenerId));
+            test.ok(instance.off('testing', listenerId) === false); // Should return false since it wasn't removed
+
+            instance.emit('testing');
+
+            test.equals(count, 2, 'Some events that were not removed were not ran');
+        }, 'Failed to remove event listener');
+
+        test.done();
     }
 };

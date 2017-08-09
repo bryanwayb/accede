@@ -2,33 +2,33 @@
 
 class IndexedStack {
     constructor(indexStart = 0) {
-        this.nextIndex = indexStart;
+        this._nextIndex = indexStart;
+        this._stack = {};
         this.indexes = [];
-        this.stack = {};
     }
 
     insert(obj) {
-        let index = this.nextIndex++;
-        this.stack[index] = obj;
+        let index = this._nextIndex++;
+        this._stack[index] = obj;
         this.indexes.push(index);
         return index;
     }
 
     remove(index) {
-        return this.removePosition(this.indexes.indexOf(index));
+        let ret = false,
+            indexPosition = this.indexes.indexOf(index);
+
+        if(indexPosition !== -1
+            && this._stack[index] !== undefined) {
+            this.indexes.splice(indexPosition, 1);
+            ret = delete this._stack[index];
+        }
+        
+        return ret;
     }
 
-    removePosition(pos) {
-        let ret = false;
-
-        if(pos !== -1) {
-            let index = this.indexes[pos];
-            if((ret = delete this.stack[index])) {
-                this.indexes.splice(pos, 1);
-            }
-        }
-
-        return ret;
+    get(index) {
+        return this._stack[index];
     }
 }
 

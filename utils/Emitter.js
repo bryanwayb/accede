@@ -49,13 +49,12 @@ class Emitter {
 
         let eventStack = getEventStack(this, name);
 
-        for(let i = 0; i < eventStack.indexes.length; i++) {
-            let index = eventStack.indexes[i],
-                entry = eventStack.stack[index];
+        for(let i of eventStack.indexes) {
+            let entry = eventStack.get(i);
 
             if(entry.count !== null
                 && --entry.count <= 0) {
-                    eventStack.removePosition(i--);
+                    eventStack.remove(i);
             }
 
             try {
