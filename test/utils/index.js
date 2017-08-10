@@ -1,3 +1,4 @@
 module.exports = {
-    Emitter: require('./Emitter')
+    Emitter: require('./Emitter'),
+    IndexedStack: require('./IndexedStack')
 }
