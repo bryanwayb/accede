@@ -47,7 +47,7 @@ let threadMain = (async (callback) => {
             this.on('message', this.message.bind(this));
         }
 
-        async kill() {
+        async die() {
             await this.execute('kill');
         }
 
@@ -61,7 +61,7 @@ let threadMain = (async (callback) => {
                         try {
                             data = await this[event.data.method].apply(this, event.data.args);
                         } catch(ex) {
-                            error = ex.stack;
+                            error = ex.toString();
                         }
 
                         postMessage({
@@ -83,7 +83,7 @@ let threadMain = (async (callback) => {
         }
 
         execute(name, ...args) {
-            return new Promise((resolve) => {
+            return new Promise((resolve, reject) => {
                 let id = this._functionIndex++;
 
                 this._functionReturn[id] = (results) => {
@@ -131,8 +131,8 @@ let threadMain = (async (callback) => {
         }
     }
     catch(ex) {
-        await threadContext.execute('emit', 'error', ex.stack);
-        threadContext.kill();
+        await threadContext.execute('emit', 'error', ex.toString());
+        threadContext.die();
     }
 }).toString();
 
@@ -183,7 +183,7 @@ class Thread extends Emitter {
                     try {
                         data = await this[event.data.method].apply(this, event.data.args);
                     } catch(ex) {
-                        error = ex.stack;
+                        error = ex.toString();
                     }
 
                     this._thread.postMessage({
@@ -226,6 +226,9 @@ class Thread extends Emitter {
                 });
             });
         }
+        else {
+            throw new Error(`Cannot execute ${name}, thread is not started`);
+        }
     }
 
     async _runInMain(func, ...args) {
@@ -233,6 +236,9 @@ class Thread extends Emitter {
     }
 
     async runInContext(func, ...args) {
+        if(typeof func !== 'function') {
+            throw new Error(`First argument must be a function, found ${typeof func}`);
+        }
         return await this.execute.apply(this, ['_runInContext', func.toString(), ...args]);
     }
 

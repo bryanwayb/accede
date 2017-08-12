@@ -8,8 +8,8 @@ async function test() {
     try {
         console.log('I should catch an exception');
         console.log(await thread.runInContext(async (p) => {
-            throw new Error('test');
             return await this.runInMain((p) => {
+                throw new Error('test');
                 return p + ' here';
             }, p);
         }, 'hello'));

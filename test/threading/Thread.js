@@ -43,23 +43,182 @@ module.exports = {
             test.ok(!await instance.kill(), 'Should not return true if thread was already killed');
             test.done();
         },
-        'runInContext': async (test) => {
-            let instance = new Thread();
-            instance.start();
+        'runInContext': {
+            'basic use': async (test) => {
+                let instance = new Thread();
+                instance.start();
 
-            test.equals(await instance.runInContext((p) => {
-                return p * 10;
-            }, 2), 20);
+                test.equals(await instance.runInContext((p) => {
+                    return p * 10;
+                }, 2), 20);
 
-            instance.runInContext((p) => {
-                throw new Error('I should bubble up to the main thread');
-            }, 2).then(() => {
-                test.ok(false, 'An exception was not throw');
                 test.done();
-            }, (ex) => {
-                test.ok(ex != null, 'An exception should have been thrown and the exception returned in the reject reason');
+            },
+            'async functions': async (test) => {
+                let instance = new Thread();
+                instance.start();
+
+                test.equals(await instance.runInContext(async (p) => {
+                    return await new Promise((resolve) => {
+                        resolve(p * 10);
+                    });
+                }, 2), 20);
+
                 test.done();
-            });
+            },
+            'concurrent executions': async (test) => {
+                let instance = new Thread();
+                instance.start();
+
+                let results = [];
+
+                for(let i = 0; i < 10; i++) {
+                    results.push({
+                        expected: i,
+                        actual: await instance.runInContext(async (p) => {
+                            return await new Promise((resolve) => {
+                                resolve(p);
+                            });
+                        }, i)
+                    });
+                }
+
+                test.equals(results.filter((value) => {
+                    return value.actual != value.expected;
+                }).length, 0, 'Mismatch between expected results when running multiple concurrent functions on a thread');
+
+                test.done();
+            },
+            'error handling': {
+                'exception passthrough': async (test) => {
+                    let instance = new Thread();
+
+                    instance.start();
+
+                    instance.runInContext(() => {
+                        throw new Error('I should bubble up to the main thread');
+                    }).then(() => {
+                        test.ok(false, 'An exception was not throw');
+                        test.done();
+                    }, (ex) => {
+                        test.ok(ex != null, 'An exception should have been thrown and the exception returned in the reject reason');
+                        test.done();
+                    });
+                },
+                'unstarted thread': async (test) => {
+                    let instance = new Thread();
+
+                    instance.runInContext(() => {}).then(() => {
+                        test.ok(false, 'An exception was not throw');
+                        test.done();
+                    }, (ex) => {
+                        test.ok(ex != null, 'An exception should have been thrown and the exception returned in the reject reason');
+                        test.done();
+                    });
+                },
+                'no paramters': async (test) => {
+                    let instance = new Thread();
+
+                    instance.start();
+
+                    instance.runInContext().then(() => {
+                        test.ok(false, 'An exception was not throw');
+                        test.done();
+                    }, (ex) => {
+                        test.ok(ex != null, 'An exception should have been thrown and the exception returned in the reject reason');
+                        test.done();
+                    });
+                }
+            }
+        },
+        'runInMain': {
+            'basic use': async (test) => {
+                let instance = new Thread();
+
+                instance.start();
+
+                test.equals(await instance.runInContext(async (p) => {
+                    return await this.runInMain((p) => {
+                        return p * 2;
+                    }, p * 10);
+                }, 2), 40);
+
+                test.done();
+            },
+            'async functions': async (test) => {
+                let instance = new Thread();
+
+                instance.start();
+
+                test.equals(await instance.runInContext(async (p) => {
+                    return await this.runInMain(async (p) => {
+                        return await new Promise((resolve) => {
+                            resolve(p * 2);
+                        });
+                    }, p * 10);
+                }, 2), 40);
+
+                test.done();
+            },
+            'concurrent executions': async (test) => {
+                let instance = new Thread();
+                instance.start();
+
+                let results = [];
+
+                for(let i = 0; i < 10; i++) {
+                    results.push({
+                        expected: i,
+                        actual: await instance.runInContext(async (p) => {
+                            return await this.runInMain(async (p) => {
+                                return await new Promise((resolve) => {
+                                    resolve(p);
+                                });
+                            }, p);
+                        }, i)
+                    });
+                }
+
+                test.equals(results.filter((value) => {
+                    return value.actual != value.expected;
+                }).length, 0, 'Mismatch between expected results when running multiple concurrent functions on a thread');
+
+                test.done();
+            },
+            'error handling': {
+                'exception passthrough': async (test) => {
+                    let instance = new Thread();
+
+                    instance.start();
+
+                    instance.runInContext(async () => {
+                        await this.runInMain(() => {
+                            throw new Error('I should bubble up to the main thread');
+                        });
+                    }).then(() => {
+                        test.ok(false, 'An exception was not throw');
+                        test.done();
+                    }, (ex) => {
+                        test.ok(ex != null, 'An exception should have been thrown and the exception returned in the reject reason');
+                        test.done();
+                    });
+                },
+                'no paramters': async (test) => {
+                    let instance = new Thread();
+
+                    instance.start();
+
+                    instance.runInContext(async () => {
+                        await this.runInMain();
+                    }).then(() => {
+                        test.ok(false, 'An exception was not throw');
+                        test.done();
+                    }, (ex) => {
+                        test.ok(ex != null, 'An exception should have been thrown and the exception returned in the reject reason');
+                        test.done();
+                    });
+                }
+            }
         }
     }
 };

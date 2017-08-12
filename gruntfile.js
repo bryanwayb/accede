@@ -2,7 +2,7 @@ const path = require('path'),
     fs = require('fs');
 
 const filetypes = ['.js'],
-    ignore = ['node_modules', '.git', 'test', 'test.js', 'build', 'gruntfile.js'];
+    ignore = ['node_modules', '.git', 'test', 'test.js', 'build', 'gruntfile.js', 'temp'];
 
 const sourceFiles = (function recursiveLookup(dir = path.resolve(__dirname, './')) {
     let ret = [];
@@ -42,7 +42,7 @@ module.exports = function (grunt) {
         },
         shell: {
             'test-primary': 'karma start --single-run --browsers ChromeHeadless karma.config.js',
-            'test-all': 'karma start --single-run --browsers ChromeHeadless,ChromeCanaryHeadless,Edge,Firefox karma.config.js'
+            'test-all': 'karma start --single-run --browsers ChromeHeadless,Firefox karma.config.js'
         },
         browserify: {
             dev: {
@@ -108,7 +108,8 @@ module.exports = function (grunt) {
             test: {
                 files: [
                     'test/*.js',
-                    'test/**/*.js'
+                    'test/**/*.js',
+                    ...sourceFiles
                 ],
                 tasks: ['test']
             }
