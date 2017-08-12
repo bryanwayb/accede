@@ -2,7 +2,7 @@ module.exports = function(config) {
     config.set({
         frameworks: ['nodeunit'],
         files: ['temp/test.js'],
-        reporters: ['dots'],
+        reporters: ['progress'],
         logLevel: config.INFO,
         port: 9876,
         colors: true,

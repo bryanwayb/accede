@@ -41,7 +41,7 @@ module.exports = function (grunt) {
             }
         },
         shell: {
-            'test-headless': 'karma start --single-run --browsers ChromeHeadless,ChromeCanaryHeadless karma.config.js',
+            'test-primary': 'karma start --single-run --browsers ChromeHeadless karma.config.js',
             'test-all': 'karma start --single-run --browsers ChromeHeadless,ChromeCanaryHeadless,Edge,Firefox karma.config.js'
         },
         browserify: {
@@ -124,8 +124,8 @@ module.exports = function (grunt) {
     grunt.task.registerTask('test:all', ['test:build', 'test:run:all', 'clean:temp']);
 
     grunt.task.registerTask('test:build', ['clean:test', 'browserify:test']);
-    grunt.task.registerTask('test:run', ['test:run:headless']);
-    grunt.task.registerTask('test:run:headless', ['env:bin', 'shell:test-headless']);
+    grunt.task.registerTask('test:run', ['test:run:primary']);
+    grunt.task.registerTask('test:run:primary', ['env:bin', 'shell:test-primary']);
     grunt.task.registerTask('test:run:all', ['env:bin', 'shell:test-all']);
 
     // grunt.task.registerTask('default', ['bgShell:dev', 'watch:dev']);

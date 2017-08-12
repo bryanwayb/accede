@@ -91,12 +91,12 @@ let threadMain = (async (callback) => {
             });
         }
 
-        async _runInContext(func) {
-            return await eval(`(${func})`)();
+        async _runInContext(func, ...args) {
+            return await eval(`(${func})`).apply(this, args);
         }
 
-        async runInMain(func) {
-            return await this.execute('_runInMain', func.toString());
+        async runInMain(func, ...args) {
+            return await this.execute.apply(this, ['_runInMain', func.toString(), ...args]);
         }
     }
 
@@ -111,7 +111,11 @@ let threadMain = (async (callback) => {
     };
 
     try {
-        await callback(threadContext, null, null);
+        let func = await callback(threadContext, null, null);
+
+        if(typeof func === 'function') {
+            await func();
+        }
     }
     catch(ex) {
         await threadContext.execute('emit', 'error', ex.stack);
@@ -198,12 +202,12 @@ class Thread extends Emitter {
         }
     }
 
-    async _runInMain(func) {
-        return await eval(`(${func})`)();
+    async _runInMain(func, ...args) {
+        return await eval(`(${func})`).apply(this, args);
     }
 
-    async runInContext(func) {
-        return await this.execute('_runInContext', func.toString());
+    async runInContext(func, ...args) {
+        return await this.execute.apply(this, ['_runInContext', func.toString(), ...args]);
     }
 
     async kill() {
@@ -214,44 +218,3 @@ class Thread extends Emitter {
 }
 
 module.exports = Thread;
-
-/////////
-
-// let thread = new Thread(async () => {
-//     console.log('in thread');
-//     console.log('end of entry');
-
-//     thread.runInMain(() => {
-//         console.log(document);
-//     });
-
-//     //await thread.kill();
-// });
-
-// let thread = new Thread();
-
-// thread.on('error', (ex) => {
-//     console.error(ex);
-// });
-
-// console.log('starting thread');
-
-// thread.start();
-
-// thread.runInContext(() => {
-//     console.log('hello');
-// });
-
-// let thread = new Thread((scope, context) => {
-//     context.doneStuff = (r) => {
-//         return r + 'x';
-//     };
-
-//     scope.test = (r) => {
-//         return context.doneStuff(r * 4);
-//     };
-// });
-
-// let threadContext = thread.Start();
-
-// console.log(threadContext.test(2));
