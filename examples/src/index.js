@@ -1,29 +1,23 @@
 const accede = require('../../index.js');
 
-let thread = new accede.threading.Thread();
+let pool = new accede.threading.Pool(4, 8);
 
-thread.start();
+(async () => {
+    await pool.start();
 
-async function test() {
-    try {
-        console.log('I should catch an exception');
-        console.log(await thread.runInContext(async (p) => {
-            return await this.runInMain((p) => {
-                throw new Error('test');
-                return p + ' here';
-            }, p);
-        }, 'hello'));
-        console.log('Exception not caught');
-    }
-    catch(ex) {
-        console.log('Exception caught');
-    }
+    let start = Date.now();
 
-    console.log('now here');
+    console.log('started');
 
-    await thread.kill();
+    await pool.cluster(32, async () => {
+        return await new Promise((resolve) => {
+            setTimeout(() => {
+                resolve();
+            }, 50);
+        });
+    });
 
-    console.log('made it this far');
-}
+    console.log(`Done in ${Date.now() - start}ms`)
 
-test();
+    await pool.kill();
+})();

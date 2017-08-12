@@ -104,6 +104,10 @@ let threadMain = (async (callback) => {
             });
         }
 
+        async _setupOnline(threadId) {
+            this.id = threadId;
+        }
+
         async _runInContext(func, ...args) {
             return await eval(`(${func})`).apply(this, args);
         }
@@ -136,6 +140,9 @@ let threadMain = (async (callback) => {
     }
 }).toString();
 
+let threadIndex = 0,
+    threadStack = {};
+
 class Thread extends Emitter {
     constructor(func) {
         if(func != null && typeof func !== 'function') {
@@ -148,9 +155,14 @@ class Thread extends Emitter {
         this._thread = null;
         this._functionIndex = 0;
         this._functionReturn = {};
+        this.id = null;
     }
 
-    start() {
+    static get all() {
+        return threadStack;
+    }
+
+    async start() {
         let ret = this._thread == null;
 
         if(ret) {
@@ -159,6 +171,8 @@ class Thread extends Emitter {
                 scriptBlobURL = URL.createObjectURL(scriptBlob);
 
             this._thread = new Worker(scriptBlobURL);
+            this.id = ++threadIndex;
+            threadStack[this.id] = this;
             this._thread.onmessage = this.message.bind(this);
 
             this._thread.onerror = () => {
@@ -166,6 +180,8 @@ class Thread extends Emitter {
             };
 
             URL.revokeObjectURL(scriptBlobURL);
+
+            await this.execute('_setupOnline', this.id);
         }
 
         return ret;
@@ -246,6 +262,7 @@ class Thread extends Emitter {
         let ret = false;
         if(this._thread != null) {
             this._thread.terminate();
+            delete threadStack[this.id];
             this._thread = null;
             ret = true;
         }

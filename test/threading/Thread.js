@@ -37,8 +37,8 @@ module.exports = {
     'running': {
         'start/kill': async (test) => {
             let instance = new Thread();
-            test.ok(instance.start());
-            test.ok(!instance.start(), 'Should not return true if thread was already created');
+            test.ok(await instance.start());
+            test.ok(!await instance.start(), 'Should not return true if thread was already created');
             test.ok(await instance.kill());
             test.ok(!await instance.kill(), 'Should not return true if thread was already killed');
             test.done();
@@ -46,7 +46,7 @@ module.exports = {
         'runInContext': {
             'basic use': async (test) => {
                 let instance = new Thread();
-                instance.start();
+                await instance.start();
 
                 test.equals(await instance.runInContext((p) => {
                     return p * 10;
@@ -56,7 +56,7 @@ module.exports = {
             },
             'async functions': async (test) => {
                 let instance = new Thread();
-                instance.start();
+                await instance.start();
 
                 test.equals(await instance.runInContext(async (p) => {
                     return await new Promise((resolve) => {
@@ -68,7 +68,7 @@ module.exports = {
             },
             'concurrent executions': async (test) => {
                 let instance = new Thread();
-                instance.start();
+                await instance.start();
 
                 let results = [];
 
@@ -93,7 +93,7 @@ module.exports = {
                 'exception passthrough': async (test) => {
                     let instance = new Thread();
 
-                    instance.start();
+                    await instance.start();
 
                     instance.runInContext(() => {
                         throw new Error('I should bubble up to the main thread');
@@ -119,7 +119,7 @@ module.exports = {
                 'no paramters': async (test) => {
                     let instance = new Thread();
 
-                    instance.start();
+                    await instance.start();
 
                     instance.runInContext().then(() => {
                         test.ok(false, 'An exception was not throw');
@@ -135,7 +135,7 @@ module.exports = {
             'basic use': async (test) => {
                 let instance = new Thread();
 
-                instance.start();
+                await instance.start();
 
                 test.equals(await instance.runInContext(async (p) => {
                     return await this.runInMain((p) => {
@@ -148,7 +148,7 @@ module.exports = {
             'async functions': async (test) => {
                 let instance = new Thread();
 
-                instance.start();
+                await instance.start();
 
                 test.equals(await instance.runInContext(async (p) => {
                     return await this.runInMain(async (p) => {
@@ -162,7 +162,7 @@ module.exports = {
             },
             'concurrent executions': async (test) => {
                 let instance = new Thread();
-                instance.start();
+                await instance.start();
 
                 let results = [];
 
@@ -189,7 +189,7 @@ module.exports = {
                 'exception passthrough': async (test) => {
                     let instance = new Thread();
 
-                    instance.start();
+                    await instance.start();
 
                     instance.runInContext(async () => {
                         await this.runInMain(() => {
@@ -206,7 +206,7 @@ module.exports = {
                 'no paramters': async (test) => {
                     let instance = new Thread();
 
-                    instance.start();
+                    await instance.start();
 
                     instance.runInContext(async () => {
                         await this.runInMain();
