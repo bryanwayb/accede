@@ -104,6 +104,13 @@ module.exports = function (grunt) {
             dev: {
                 files: sourceFiles,
                 tasks: ['dev']
+            },
+            test: {
+                files: [
+                    'test/*.js',
+                    'test/**/*.js'
+                ],
+                tasks: ['test']
             }
         },
         bgShell: {
@@ -117,6 +124,7 @@ module.exports = function (grunt) {
     grunt.task.registerTask('default', ['bgShell:dev', 'watch:dev']);
 
     grunt.task.registerTask('dev', ['clean:dev', 'browserify:dev']);
+    grunt.task.registerTask('dev:test', ['watch:test']);
 
     grunt.task.registerTask('dist', ['clean:dist', 'browserify:dist']);
 

@@ -55,19 +55,27 @@ let threadMain = (async (callback) => {
             if(event && event.data) {
                 if(event.data.type === 'function') {
                     if(this[event.data.method]) {
-                        let data = await this[event.data.method].apply(this, event.data.args);
+                        let data = null,
+                            error = null;
+
+                        try {
+                            data = await this[event.data.method].apply(this, event.data.args);
+                        } catch(ex) {
+                            error = ex.stack;
+                        }
 
                         postMessage({
                             type: 'return',
                             id: event.data.id,
-                            data: data
+                            data: data,
+                            error: error
                         });
                     }
                 }
                 else if(event.data.type === 'return') {
                     let handler = this._functionReturn[event.data.id];
                     if(handler != null) {
-                        handler(event.data.data);
+                        handler(event.data);
                         delete this._functionReturn[event.data.id];
                     }
                 }
@@ -78,8 +86,13 @@ let threadMain = (async (callback) => {
             return new Promise((resolve) => {
                 let id = this._functionIndex++;
 
-                this._functionReturn[id] = (data) => {
-                    resolve(data);
+                this._functionReturn[id] = (results) => {
+                    if(results.error) {
+                        reject(results.error);
+                    }
+                    else {
+                        resolve(results.data);
+                    }
                 };
 
                 postMessage({
@@ -164,19 +177,27 @@ class Thread extends Emitter {
         if(event && event.data) {
             if(event.data.type === 'function') {
                 if(this[event.data.method]) {
-                    let data = await this[event.data.method].apply(this, event.data.args);
+                    let data = null,
+                        error = null;
+
+                    try {
+                        data = await this[event.data.method].apply(this, event.data.args);
+                    } catch(ex) {
+                        error = ex.stack;
+                    }
 
                     this._thread.postMessage({
                         type: 'return',
                         id: event.data.id,
-                        data: data
+                        data: data,
+                        error: error
                     });
                 }
             }
             else if(event.data.type === 'return') {
                 let handler = this._functionReturn[event.data.id];
                 if(handler != null) {
-                    handler(event.data.data);
+                    handler(event.data);
                     delete this._functionReturn[event.data.id];
                 }
             }
@@ -185,11 +206,16 @@ class Thread extends Emitter {
 
     execute(name, ...args) {
         if(this._thread != null) {
-            return new Promise((resolve) => {
+            return new Promise((resolve, reject) => {
                 let id = this._functionIndex++;
 
-                this._functionReturn[id] = (data) => {
-                    resolve(data);
+                this._functionReturn[id] = (results) => {
+                    if(results.error) {
+                        reject(results.error);
+                    }
+                    else {
+                        resolve(results.data);
+                    }
                 };
 
                 this._thread.postMessage({
@@ -211,9 +237,13 @@ class Thread extends Emitter {
     }
 
     async kill() {
+        let ret = false;
         if(this._thread != null) {
             this._thread.terminate();
+            this._thread = null;
+            ret = true;
         }
+        return ret;
     }
 }
 
