@@ -1,14 +1,8 @@
 'use strict';
 
-const asyncFunctionConstructor = Object.getPrototypeOf(async function(){}).constructor;
-
 class Async {
     static isPromise(obj) {
         return obj != null && Promise.prototype === obj.__proto__;
-    }
-
-    static isAsyncFunction(obj) {
-        return obj != null && Object.getPrototypeOf(obj).constructor === asyncFunctionConstructor;
     }
 
     static async fromResult(obj) {
@@ -54,14 +48,7 @@ class Async {
                 promises[i] = callbacks[i];
             }
             else if(typeof callbacks[i] === 'function') {
-                if(Async.isAsyncFunction(callbacks[i])) {
-                    promises[i] = callbacks[i]();
-                }
-                else {
-                    promises[i] = new Promise((resolve) => {
-                        callbacks[i](resolve);
-                    });
-                }
+                promises[i] = callbacks[i]();
             }
             else {
                 throw new Error(`Invalid object with the type ${typeof callbacks[i]} was passed`);
@@ -80,14 +67,7 @@ class Async {
                 data[i] = await callbacks[i];
             }
             else if (typeof callbacks[i] === 'function') {
-                if(Async.isAsyncFunction(callbacks[i])) {
-                    data[i] = await callbacks[i]();
-                }
-                else {
-                    data[i] = await new Promise((resolve) => {
-                        callbacks[i](resolve);
-                    });
-                }
+                data[i] = await callbacks[i]();
             }
             else {
                 throw new Error(`Invalid object with the type ${typeof callbacks[i]} was passed`);
@@ -102,14 +82,7 @@ class Async {
 
         if(!Async.isPromise(callback)) {
             if(typeof callback === 'function') {
-                if(Async.isAsyncFunction(callback)) {
-                    p = callback();
-                }
-                else {
-                    p = new Promise((resolve) => {
-                        callback(resolve);
-                    });
-                }
+                p = callback();
             }
             else {
                 throw new Error(`Invalid object with the type ${typeof callback} was passed`);
@@ -125,13 +98,8 @@ class Async {
 
             let ret = null;
 
-            if(Async.isAsyncFunction(resolved)) {
+            if(typeof resolved === 'function') {
                 ret = await resolved.apply(this, args);
-            }
-            else if(typeof resolved === 'function') {
-                ret = await new Promise((resolve) => {
-                    resolve(resolved.apply(this, args));
-                });
             }
             else {
                 throw new Error(`Invalid object with the type ${typeof resolved} was resolved`);

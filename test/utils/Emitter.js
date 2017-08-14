@@ -24,10 +24,6 @@ module.exports = {
         });
 
         test.throws(() => {
-            instance.on('testing', async () => { });
-        });
-
-        test.throws(() => {
             instance.on('testing', new Promise((resolve) => { resolve(() => { }) }));
         });
 

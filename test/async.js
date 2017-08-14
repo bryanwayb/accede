@@ -18,23 +18,6 @@ module.exports = {
             test.done();
         }
     },
-    'isAsyncFunction': {
-        'async function': function (test) {
-            test.ok(accede.async.isAsyncFunction(async () => { return await new Promise((r) => { r() }); }));
-            test.done();
-        },
-        'function': function (test) {
-            test.ok(!accede.async.isAsyncFunction(() => { }));
-            test.done();
-        },
-        'null/undefined': function (test) {
-            test.doesNotThrow(() => {
-                test.ok(!accede.async.isAsyncFunction(null));
-                test.ok(!accede.async.isAsyncFunction());
-            });
-            test.done();
-        }
-    },
     'fromResult': async function(test) {
         test.ok(accede.async.isPromise(accede.async.fromResult(null)));
 
@@ -60,72 +43,44 @@ module.exports = {
         test.done();
     },
     'call': {
-        'function': {
-            'run': function (test) {
-                test.doesNotThrow(() => {
-                    accede.async.call(() => {
-                        test.done();
-                    });
-                });
-            },
-            'async check': function (test) {
-                let check = false;
+        'run': function (test) {
+            test.doesNotThrow(() => {
                 accede.async.call(() => {
-                    test.ok(check);
                     test.done();
                 });
-                check = true;
-            },
-            'cancel': function (test) {
-                test.doesNotThrow(() => {
-                    accede.async.call(() => {
-                        throw new Error('I should never get thrown');
-                    })();
-                    accede.async.call(() => {
-                        test.done(); // But I should
-                    });
-                });
-            },
-            'null/undefined': function (test) {
-                test.throws(() => {
-                    accede.async.call(null);
-                });
-
-                test.throws(() => {
-                    accede.async.call();
-                });
-
+            });
+        },
+        'async check': function (test) {
+            let check = false;
+            accede.async.call(() => {
+                test.ok(check);
                 test.done();
-            }
+            });
+            check = true;
+        },
+        'cancel': function (test) {
+            test.doesNotThrow(() => {
+                accede.async.call(() => {
+                    throw new Error('I should never get thrown');
+                })();
+                accede.async.call(() => {
+                    test.done(); // But I should
+                });
+            });
+        },
+        'null/undefined': function (test) {
+            test.throws(() => {
+                accede.async.call(null);
+            });
+
+            test.throws(() => {
+                accede.async.call();
+            });
+
+            test.done();
         }
     },
     'defer': {
-        'function': {
-            'single': function (test) {
-                accede.async.defer((done) => {
-                    done(true);
-                }).then((results) => {
-                    test.ok(results[0]);
-                    test.done();
-                });
-            },
-            'multiple': function (test) {
-                accede.async.defer((done) => {
-                    done(true);
-                },
-                (done) => {
-                    done(false);
-                },
-                (done) => {
-                    done(true);
-                }).then((results) => {
-                    test.ok(results[0]);
-                    test.ok(!results[1]);
-                    test.ok(results[2]);
-                    test.done();
-                });
-            }
-        },
         'async functions': {
             'single': function (test) {
                 accede.async.defer(async () => {
@@ -214,32 +169,6 @@ module.exports = {
         }
     },
     'chain': {
-        'function': {
-            'single': function (test) {
-                accede.async.chain((done) => {
-                    done(true);
-                }).then((results) => {
-                    test.ok(results[0]);
-                    test.done();
-                });
-            },
-            'multiple': function (test) {
-                accede.async.chain((done) => {
-                    done(true);
-                },
-                (done) => {
-                    done(false);
-                },
-                (done) => {
-                    done(true);
-                }).then((results) => {
-                    test.ok(results[0]);
-                    test.ok(!results[1]);
-                    test.ok(results[2]);
-                    test.done();
-                });
-            }
-        },
         'async functions': {
             'single': function (test) {
                 accede.async.chain(async () => {
@@ -329,19 +258,8 @@ module.exports = {
     },
     'until': {
         'setup': {
-            'function': async function (test) {
-                let method = await accede.async.until((done) => {
-                    done(() => {
-                        return true;
-                    });
-                });
-
-                test.ok(await method() === true);
-
-                test.done();
-            },
             'async function': async function (test) {
-                let method = await accede.async.until(async (done) => {
+                let method = await accede.async.until(async () => {
                     return await accede.async.fromResult(() => {
                         return true;
                     });
@@ -394,7 +312,7 @@ module.exports = {
                 test.done();
             },
             'null': async function (test) {
-                let method = await accede.async.until(async (done) => {
+                let method = await accede.async.until(async () => {
                     return await accede.async.fromResult(new Promise((resolve) => {
                         resolve(null);
                     }));
@@ -411,7 +329,7 @@ module.exports = {
                 test.done();
             },
             'empty': async function (test) {
-                let method = await accede.async.until(async (done) => {
+                let method = await accede.async.until(async () => {
                     return await accede.async.fromResult(new Promise((resolve) => {
                         resolve(null);
                     }));

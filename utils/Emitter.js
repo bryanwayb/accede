@@ -1,7 +1,6 @@
 'use strict';
 
-const IndexedStack = require('./IndexedStack'),
-    async = require('../async');
+const IndexedStack = require('./IndexedStack');
 
 function getEventStack(context, name) {
     let eventContext = context._eventContext;
@@ -21,9 +20,6 @@ class Emitter {
     counter(name, count, callback) {
         if(typeof callback !== 'function') {
             throw new Error('Invalid parameter passed, expecting a function type');
-        }
-        else if(async.isAsyncFunction(callback)) {
-            throw new Error('Only synchronous functions are allowed as event callbacks');
         }
 
         return getEventStack(this, name).insert({
