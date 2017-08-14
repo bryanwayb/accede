@@ -46,6 +46,37 @@ module.exports = function (grunt) {
             'test-primary': 'karma start --single-run --browsers ChromeHeadless karma.config.js',
             'test-all': 'karma start --single-run --browsers ChromeHeadless,Firefox karma.config.js'
         },
+        copy: {
+            'test-entrypoint': {
+                files: {
+                    '_test.js': ['test.js']
+                }
+            },
+            'index-entrypoint': {
+                files: {
+                    '_index.js': ['index.js']
+                }
+            }
+        },
+        concat: {
+            options: {
+                seperator: '\n'
+            },
+            'test-babel': {
+                src: [
+                    'babel.prefix.js',
+                    'test.js'
+                ],
+                dest: '_test.js'
+            },
+            'index-babel': {
+                src: [
+                    'babel.prefix.js',
+                    'index.js'
+                ],
+                dest: '_index.js'
+            }
+        },
         browserify: {
             dev: {
                 files: {
@@ -54,17 +85,24 @@ module.exports = function (grunt) {
                     ]
                 }
             },
-            dist: {
+            'dist-next': {
                 files: {
                     'dist/accede.js': [
-                        'index.js'
+                        '_index.js'
+                    ]
+                }
+            },
+            'dist-es5': {
+                files: {
+                    'dist/accede.es5.js': [
+                        '_index.js'
                     ]
                 }
             },
             test: {
                 files: {
                     'temp/test.js': [
-                        'test.js'
+                        '_test.js'
                     ]
                 }
             },
@@ -74,7 +112,12 @@ module.exports = function (grunt) {
                 }
             }
         },
-        uglify: {
+        babel: {
+            options: {
+                presets: ['es2015', 'es2017'],
+                plugins: ['transform-regenerator'],
+                sourceMaps: 'inline'
+            },
             test: {
                 files: {
                     'temp/test.js': ['temp/test.js']
@@ -82,7 +125,24 @@ module.exports = function (grunt) {
             },
             dist: {
                 files: {
+                    'dist/accede.es5.js': ['dist/accede.es5.js']
+                }
+            }
+        },
+        uglify: {
+            test: {
+                files: {
+                    'temp/test.js': ['temp/test.js']
+                }
+            },
+            'dist-next': {
+                files: {
                     'dist/accede.min.js': ['dist/accede.js']
+                }
+            },
+            'dist-es5': {
+                files: {
+                    'dist/accede.es5.min.js': ['dist/accede.es5.js']
                 }
             },
             options: {
@@ -123,6 +183,18 @@ module.exports = function (grunt) {
                     'dist'
                 ]
             },
+            'dist-next': {
+                src: [
+                    'dist/accede.js',
+                    'dist/accede.min.js'
+                ]
+            },
+            'dist-es5': {
+                src: [
+                    'dist/accede.es5.js',
+                    'dist/accede.es5.min.js'
+                ]
+            },
             temp: {
                 src: [
                     'temp'
@@ -131,6 +203,16 @@ module.exports = function (grunt) {
             test: {
                 src: [
                     'temp/test.js'
+                ]
+            },
+            'test-entrypoint': {
+                src: [
+                    '_test.js'
+                ]
+            },
+            'index-entrypoint': {
+                src: [
+                    '_index.js'
                 ]
             }
         },
@@ -164,28 +246,36 @@ module.exports = function (grunt) {
     grunt.task.registerTask('dev', ['clean:dev', 'browserify:dev']);
     grunt.task.registerTask('dev:test', ['watch:test']);
 
-    grunt.task.registerTask('dist', ['clean:dist', 'browserify:dist', 'uglify:dist']);
+    grunt.task.registerTask('dist', ['clean:dist', 'dist:next', 'dist:es5']);
+    grunt.task.registerTask('dist:next', ['clean:dist-next', 'copy:index-entrypoint', 'browserify:dist-next', 'clean:index-entrypoint', 'uglify:dist-next']);
+    grunt.task.registerTask('dist:es5', ['clean:dist-es5', 'concat:index-babel', 'browserify:dist-es5', 'clean:index-entrypoint', 'babel:dist', 'uglify:dist-es5']);
 
     grunt.task.registerTask('test', ['test:debug', 'test:dist']);
-    grunt.task.registerTask('test:debug', ['test:build:debug', 'test:run:primary', 'clean:temp']);
-    grunt.task.registerTask('test:dist', ['test:build:dist', 'test:run:primary', 'clean:temp']);
+
+    grunt.task.registerTask('test:debug', ['test:debug:next', 'test:debug:es5']);
+    grunt.task.registerTask('test:debug:next', ['test:build:debug:next', 'test:run:primary', 'clean:temp']);
+    grunt.task.registerTask('test:debug:es5', ['test:build:debug:es5', 'test:run:primary', 'clean:temp']);
+
+    grunt.task.registerTask('test:dist', ['test:dist:next', 'test:dist:es5']);
+    grunt.task.registerTask('test:dist:next', ['test:build:dist:next', 'test:run:primary', 'clean:temp']);
+    grunt.task.registerTask('test:dist:es5', ['test:build:dist:es5', 'test:run:primary', 'clean:temp']);
 
     grunt.task.registerTask('test:all', ['test:all:debug', 'test:all:dist']);
-    grunt.task.registerTask('test:all:debug', ['test:build:debug', 'test:run:all', 'clean:temp']);
-    grunt.task.registerTask('test:all:dist', ['test:build:dist', 'test:run:all', 'clean:temp']);
 
-    grunt.task.registerTask('test:build:debug', ['clean:test', 'browserify:test']);
-    grunt.task.registerTask('test:build:dist', ['clean:test', 'browserify:test', 'uglify:test']);
+    grunt.task.registerTask('test:all:debug', ['test:all:debug:next', 'test:all:debug:es5']);
+    grunt.task.registerTask('test:all:debug:next', ['test:build:debug:next', 'test:run:all', 'clean:temp']);
+    grunt.task.registerTask('test:all:debug:es5', ['test:build:debug:es5', 'test:run:all', 'clean:temp']);
+
+    grunt.task.registerTask('test:all:dist', ['test:all:dist:next', 'test:all:dist:es5']);
+    grunt.task.registerTask('test:all:dist:next', ['test:build:dist:next', 'test:run:all', 'clean:temp']);
+    grunt.task.registerTask('test:all:dist:es5', ['test:build:dist:es5', 'test:run:all', 'clean:temp']);
+
+    grunt.task.registerTask('test:build:debug:next', ['clean:test', 'copy:test-entrypoint', 'browserify:test', 'clean:test-entrypoint']);
+    grunt.task.registerTask('test:build:debug:es5', ['clean:test', 'concat:test-babel', 'browserify:test', 'clean:test-entrypoint', 'babel:test']);
+
+    grunt.task.registerTask('test:build:dist:next', ['clean:test', 'copy:test-entrypoint', 'browserify:test', 'clean:test-entrypoint', 'uglify:test']);
+    grunt.task.registerTask('test:build:dist:es5', ['clean:test', 'concat:test-babel', 'browserify:test', 'clean:test-entrypoint', 'babel:test', 'uglify:test']);
 
     grunt.task.registerTask('test:run:primary', ['env:bin', 'shell:test-primary']);
     grunt.task.registerTask('test:run:all', ['env:bin', 'shell:test-all']);
-
-    // grunt.task.registerTask('default', ['bgShell:dev', 'watch:dev']);
-
-    // grunt.task.registerTask('dev', ['clean:dist', 'env:dev', 'copy:dev', 'copy:dist', 'browserify:demo', 'clean:temp']);
-    // grunt.task.registerTask('debug', ['clean:dist', 'babel:dist', 'copy:dist', 'browserify:demo', 'clean:temp']);
-    // grunt.task.registerTask('dist', ['clean:dist', 'env:dist', 'babel:dist', 'copy:dist', 'browserify:dist', 'exorcise:dist', 'uglify:dist', 'clean:temp']);
-
-    // grunt.task.registerTask('fix', ['jscs:fix']);
-    // grunt.task.registerTask('test', ['jscs:test', 'jslint:test']);
 };

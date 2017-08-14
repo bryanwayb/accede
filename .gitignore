@@ -60,3 +60,5 @@ typings/
 temp/
 examples/build/
 dist/
+_index.js
+_test.js
