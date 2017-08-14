@@ -1,6 +1,9 @@
 const path = require('path'),
     fs = require('fs');
 
+let defaultEnv = {};
+Object.assign(defaultEnv, process.env);
+
 Object.assign(require('uglify-js'), require('uglify-es')); // Override uglify-js with uglify-es for ES7 support
 
 const filetypes = ['.js'],
@@ -40,11 +43,16 @@ module.exports = function (grunt) {
                 PATH: () => {
                     return `${process.env.PATH}${/^win/.test(process.platform) ? ';' : ':'}${path.resolve(__dirname, './node_modules/.bin')}`;
                 }
+            },
+            babel: {
+                ACCEDE_DISABLE_THREAD: true
             }
         },
         shell: {
-            'test-primary': 'karma start --single-run --browsers ChromeHeadless karma.config.js',
-            'test-all': 'karma start --single-run --browsers ChromeHeadless,Firefox karma.config.js'
+            'test-primary-next': 'karma start --single-run --browsers ChromeHeadless karma.config.js',
+            'test-primary-es5': 'karma start --single-run --browsers ChromeHeadless,PhantomJS karma.config.js',
+            'test-all-next': 'karma start --single-run --browsers ChromeHeadless,Firefox karma.config.js',
+            'test-all-es5': 'karma start --single-run --browsers ChromeHeadless,PhantomJS,Firefox karma.config.js'
         },
         copy: {
             'test-entrypoint': {
@@ -108,7 +116,12 @@ module.exports = function (grunt) {
             },
             options: {
                 browserifyOptions: {
-                    debug: true
+                    debug: true,
+                    transform: [
+                        ['envify', {
+                            _: 'purge'
+                        }]
+                    ]
                 }
             }
         },
@@ -243,39 +256,49 @@ module.exports = function (grunt) {
 
     grunt.task.registerTask('default', ['bgShell:dev', 'watch:dev']);
 
-    grunt.task.registerTask('dev', ['clean:dev', 'browserify:dev']);
+    grunt.task.registerTask('dev', ['reset:env', 'clean:dev', 'browserify:dev']);
     grunt.task.registerTask('dev:test', ['watch:test']);
 
     grunt.task.registerTask('dist', ['clean:dist', 'dist:next', 'dist:es5']);
-    grunt.task.registerTask('dist:next', ['clean:dist-next', 'copy:index-entrypoint', 'browserify:dist-next', 'clean:index-entrypoint', 'uglify:dist-next']);
-    grunt.task.registerTask('dist:es5', ['clean:dist-es5', 'concat:index-babel', 'browserify:dist-es5', 'clean:index-entrypoint', 'babel:dist', 'uglify:dist-es5']);
+    grunt.task.registerTask('dist:next', ['reset:env', 'clean:dist-next', 'copy:index-entrypoint', 'browserify:dist-next', 'clean:index-entrypoint', 'uglify:dist-next']);
+    grunt.task.registerTask('dist:es5', ['reset:env', 'clean:dist-es5', 'concat:index-babel', 'env:babel', 'browserify:dist-es5', 'clean:index-entrypoint', 'babel:dist', 'uglify:dist-es5']);
 
     grunt.task.registerTask('test', ['test:debug', 'test:dist']);
 
     grunt.task.registerTask('test:debug', ['test:debug:next', 'test:debug:es5']);
-    grunt.task.registerTask('test:debug:next', ['test:build:debug:next', 'test:run:primary', 'clean:temp']);
-    grunt.task.registerTask('test:debug:es5', ['test:build:debug:es5', 'test:run:primary', 'clean:temp']);
+    grunt.task.registerTask('test:debug:next', ['test:build:debug:next', 'test:run:primary:next', 'clean:temp']);
+    grunt.task.registerTask('test:debug:es5', ['test:build:debug:es5', 'test:run:primary:es5', 'clean:temp']);
 
     grunt.task.registerTask('test:dist', ['test:dist:next', 'test:dist:es5']);
-    grunt.task.registerTask('test:dist:next', ['test:build:dist:next', 'test:run:primary', 'clean:temp']);
-    grunt.task.registerTask('test:dist:es5', ['test:build:dist:es5', 'test:run:primary', 'clean:temp']);
+    grunt.task.registerTask('test:dist:next', ['test:build:dist:next', 'test:run:primary:next', 'clean:temp']);
+    grunt.task.registerTask('test:dist:es5', ['test:build:dist:es5', 'test:run:primary:es5', 'clean:temp']);
 
     grunt.task.registerTask('test:all', ['test:all:debug', 'test:all:dist']);
 
     grunt.task.registerTask('test:all:debug', ['test:all:debug:next', 'test:all:debug:es5']);
-    grunt.task.registerTask('test:all:debug:next', ['test:build:debug:next', 'test:run:all', 'clean:temp']);
-    grunt.task.registerTask('test:all:debug:es5', ['test:build:debug:es5', 'test:run:all', 'clean:temp']);
+    grunt.task.registerTask('test:all:debug:next', ['test:build:debug:next', 'test:run:all:next', 'clean:temp']);
+    grunt.task.registerTask('test:all:debug:es5', ['test:build:debug:es5', 'test:run:all:es5', 'clean:temp']);
 
     grunt.task.registerTask('test:all:dist', ['test:all:dist:next', 'test:all:dist:es5']);
-    grunt.task.registerTask('test:all:dist:next', ['test:build:dist:next', 'test:run:all', 'clean:temp']);
-    grunt.task.registerTask('test:all:dist:es5', ['test:build:dist:es5', 'test:run:all', 'clean:temp']);
+    grunt.task.registerTask('test:all:dist:next', ['test:build:dist:next', 'test:run:all:next', 'clean:temp']);
+    grunt.task.registerTask('test:all:dist:es5', ['test:build:dist:es5', 'test:run:all:es5', 'clean:temp']);
 
-    grunt.task.registerTask('test:build:debug:next', ['clean:test', 'copy:test-entrypoint', 'browserify:test', 'clean:test-entrypoint']);
-    grunt.task.registerTask('test:build:debug:es5', ['clean:test', 'concat:test-babel', 'browserify:test', 'clean:test-entrypoint', 'babel:test']);
+    grunt.task.registerTask('test:build:debug:next', ['reset:env', 'clean:test', 'copy:test-entrypoint', 'browserify:test', 'clean:test-entrypoint']);
+    grunt.task.registerTask('test:build:debug:es5', ['reset:env', 'clean:test', 'concat:test-babel', 'env:babel', 'browserify:test', 'clean:test-entrypoint', 'babel:test']);
 
-    grunt.task.registerTask('test:build:dist:next', ['clean:test', 'copy:test-entrypoint', 'browserify:test', 'clean:test-entrypoint', 'uglify:test']);
-    grunt.task.registerTask('test:build:dist:es5', ['clean:test', 'concat:test-babel', 'browserify:test', 'clean:test-entrypoint', 'babel:test', 'uglify:test']);
+    grunt.task.registerTask('test:build:dist:next', ['reset:env', 'clean:test', 'copy:test-entrypoint', 'browserify:test', 'clean:test-entrypoint', 'uglify:test']);
+    grunt.task.registerTask('test:build:dist:es5', ['reset:env', 'clean:test', 'concat:test-babel', 'env:babel', 'browserify:test', 'clean:test-entrypoint', 'babel:test', 'uglify:test']);
 
-    grunt.task.registerTask('test:run:primary', ['env:bin', 'shell:test-primary']);
-    grunt.task.registerTask('test:run:all', ['env:bin', 'shell:test-all']);
+    grunt.task.registerTask('test:run:primary:next', ['reset:env', 'env:bin', 'shell:test-primary-next']);
+    grunt.task.registerTask('test:run:primary:es5', ['reset:env', 'env:bin', 'shell:test-primary-es5']);
+
+    grunt.task.registerTask('test:run:all:next', ['reset:env', 'env:bin', 'shell:test-all-next']);
+    grunt.task.registerTask('test:run:all:es5', ['reset:env', 'env:bin', 'shell:test-all-es5']);
+
+    grunt.task.registerTask('reset:env', () => {
+        for(let i in process.env) {
+            delete process.env[i];
+        }
+        Object.assign(process.env, defaultEnv);
+    });
 };
