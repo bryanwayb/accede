@@ -1,17 +1,18 @@
 'use strict';
 
-const IndexedStack = require('./IndexedStack');
-
 class Emitter {
     counter(name, count, callback) {
         if(typeof callback !== 'function') {
             throw new Error('Invalid parameter passed, expecting a function type');
         }
 
-        return this._getEventStack(this, name).insert({
+        let stack = this._getEventStack(this, name);
+        stack.data[stack.index] = {
             count: count,
             callback: callback
-        });
+        };
+
+        return stack.index++;
     }
 
     _getEventStack(context, name) {
@@ -22,7 +23,10 @@ class Emitter {
 
         let eventStack = eventContext[name];
         if(eventStack == null) {
-            eventContext[name] = eventStack = new IndexedStack();
+            eventContext[name] = eventStack = {
+                index: 0,
+                data: {}
+            };
         }
 
         return eventStack;
@@ -37,7 +41,14 @@ class Emitter {
     }
 
     off(name, index) {
-        return this._getEventStack(this, name).remove(index);
+        let data = this._getEventStack(this, name).data,
+            ret = false;
+            
+        if(data[index] !== undefined) {
+            ret = delete data[index];
+        }
+
+        return ret;
     }
 
     emit(name, ...args) {
@@ -45,12 +56,12 @@ class Emitter {
 
         let eventStack = this._getEventStack(this, name);
 
-        for(let i of eventStack.indexes) {
-            let entry = eventStack.get(i);
+        for(let i in eventStack.data) {
+            let entry = eventStack.data[i];
 
             if(entry.count !== null
                 && --entry.count <= 0) {
-                    eventStack.remove(i);
+                this.off(name, i);
             }
 
             try {

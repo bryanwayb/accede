@@ -6,9 +6,7 @@ if(!process.env.ACCEDE_DISABLE_THREAD) {
     module.exports = {
         ThreadDependency: ThreadDependency,
         entrypointDependencies: [
-            new ThreadDependency('Emitter', require('../utils/Emitter'), [
-                new ThreadDependency('IndexedStack', require('../utils/IndexedStack'))
-            ])
+            new ThreadDependency('Emitter', require('../utils/Emitter'))
         ],
         entrypoint: async (callback) => {
             class ThreadContext extends Emitter {
