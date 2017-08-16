@@ -3,20 +3,44 @@
 if(!process.env.ACCEDE_DISABLE_THREAD) {
     const Emitter = require('../utils/Emitter');
     
-    let threadMain = require('./ThreadMain').toString();
+    let threadMain = require('./threadMain'),
+        threadMainEntrypoint = threadMain.entrypoint.toString();
     
     let threadIndex = 0,
         threadStack = {};
     
     class Thread extends Emitter {
-        constructor(func) {
-            if(func != null && typeof func !== 'function') {
-                throw new Error(`Invalid argument passed to Thread constructor of type ${typeof func}`);
+        constructor(func, exposed) {
+            if(func != null) {
+                if(exposed != null) {
+                    if(typeof exposed !== 'object' || !Array.isArray(exposed)) {
+                        throw new Error(`Invalid argument passed to Thread constructor for 'exposed' of type ${typeof exposed}`);
+                    }
+                }
+                else if(typeof func === 'object' && Array.isArray(func)) {
+                    exposed = func;
+                    func = null;
+                }
+
+                if(func != null && typeof func !== 'function') {
+                    throw new Error(`Invalid argument passed to Thread constructor for 'func' of type ${typeof func}`);
+                }
             }
+
+            if(exposed == null) {
+                exposed = [];
+            }
+            else if(!Array.isArray(exposed)) {
+                exposed = [exposed];
+            }
+            exposed.push.apply(exposed, threadMain.entrypointDependencies);
+
+            // TODO verify exposed objects here
     
             super();
     
             this._func = func;
+            this._exposed = exposed;
             this._thread = null;
             this._functionIndex = 0;
             this._functionReturn = {};
@@ -31,8 +55,15 @@ if(!process.env.ACCEDE_DISABLE_THREAD) {
             let ret = this._thread == null;
     
             if(ret) {
-                let script = this._func == null ? 'null' : this._func.toString(),
-                    scriptBlob = new Blob([`(${threadMain})(async (thread, onerror, onmessage)=>{return (${script});});`], {type: 'application/javascript' }),
+                let script = '';
+
+                for(let i in this._exposed) {
+                    script += this._exposed[i].createScript();
+                }
+
+                script += `(${threadMainEntrypoint})(async (thread, onerror, onmessage)=>{return (${this._func == null ? 'null' : this._func.toString()});});`;
+
+                let scriptBlob = new Blob([script], {type: 'application/javascript' }),
                     scriptBlobURL = URL.createObjectURL(scriptBlob);
     
                 this._thread = new Worker(scriptBlobURL);

@@ -180,7 +180,7 @@ let thread = new accede.threading.Thread(() => {
 
     console.log('started');
 
-    debugger;
+    //debugger;
     ((left, right) => {
         let diff = [];
         //this.findDiffs(left, right, diff, []);

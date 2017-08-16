@@ -254,7 +254,7 @@ module.exports = function (grunt) {
         }
     });
 
-    grunt.task.registerTask('default', ['bgShell:dev', 'watch:dev']);
+    grunt.task.registerTask('default', ['dev', 'bgShell:dev', 'watch:dev']);
 
     grunt.task.registerTask('dev', ['reset:env', 'clean:dev', 'browserify:dev']);
     grunt.task.registerTask('dev:test', ['watch:test']);

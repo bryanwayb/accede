@@ -2,30 +2,30 @@
 
 const IndexedStack = require('./IndexedStack');
 
-function getEventStack(context, name) {
-    let eventContext = context._eventContext;
-    if(eventContext == null) {
-        context._eventContext = eventContext = {};
-    }
-
-    let eventStack = eventContext[name];
-    if(eventStack == null) {
-        eventContext[name] = eventStack = new IndexedStack();
-    }
-
-    return eventStack;
-}
-
 class Emitter {
     counter(name, count, callback) {
         if(typeof callback !== 'function') {
             throw new Error('Invalid parameter passed, expecting a function type');
         }
 
-        return getEventStack(this, name).insert({
+        return this._getEventStack(this, name).insert({
             count: count,
             callback: callback
         });
+    }
+
+    _getEventStack(context, name) {
+        let eventContext = context._eventContext;
+        if(eventContext == null) {
+            context._eventContext = eventContext = {};
+        }
+
+        let eventStack = eventContext[name];
+        if(eventStack == null) {
+            eventContext[name] = eventStack = new IndexedStack();
+        }
+
+        return eventStack;
     }
 
     on(name, callback) {
@@ -37,13 +37,13 @@ class Emitter {
     }
 
     off(name, index) {
-        return getEventStack(this, name).remove(index);
+        return this._getEventStack(this, name).remove(index);
     }
 
     emit(name, ...args) {
         let errors = [];
 
-        let eventStack = getEventStack(this, name);
+        let eventStack = this._getEventStack(this, name);
 
         for(let i of eventStack.indexes) {
             let entry = eventStack.get(i);
