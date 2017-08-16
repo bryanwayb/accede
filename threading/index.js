@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = {
-    Thread: require('./Thread'),
     ThreadDependency: require('./ThreadDependency'),
+    Thread: require('./Thread'),
     Pool: require('./Pool')
 };

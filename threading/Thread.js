@@ -1,7 +1,8 @@
 'use strict';
 
 if(!process.env.ACCEDE_DISABLE_THREAD) {
-    const Emitter = require('../utils/Emitter');
+    const Emitter = require('../utils/Emitter'),
+        ThreadDependency = require('./ThreadDependency');
     
     let threadMain = require('./threadMain'),
         threadMainEntrypoint = threadMain.entrypoint.toString();
@@ -10,15 +11,15 @@ if(!process.env.ACCEDE_DISABLE_THREAD) {
         threadStack = {};
     
     class Thread extends Emitter {
-        constructor(func, exposed) {
+        constructor(func, dependencies) {
             if(func != null) {
-                if(exposed != null) {
-                    if(typeof exposed !== 'object' || !Array.isArray(exposed)) {
-                        throw new Error(`Invalid argument passed to Thread constructor for 'exposed' of type ${typeof exposed}`);
+                if(dependencies != null) {
+                    if(typeof dependencies !== 'object' || !Array.isArray(dependencies)) {
+                        throw new Error(`Invalid argument passed to Thread constructor for 'dependencies' of type ${typeof dependencies}`);
                     }
                 }
                 else if(typeof func === 'object' && Array.isArray(func)) {
-                    exposed = func;
+                    dependencies = func;
                     func = null;
                 }
 
@@ -27,20 +28,20 @@ if(!process.env.ACCEDE_DISABLE_THREAD) {
                 }
             }
 
-            if(exposed == null) {
-                exposed = [];
+            if(dependencies == null) {
+                dependencies = [];
             }
-            else if(!Array.isArray(exposed)) {
-                exposed = [exposed];
+            else if(!Array.isArray(dependencies)) {
+                dependencies = [dependencies];
             }
-            exposed.push.apply(exposed, threadMain.entrypointDependencies);
+            dependencies.push.apply(dependencies, threadMain.entrypointDependencies);
 
-            // TODO verify exposed objects here
+            ThreadDependency.verifyDependencies(dependencies);
     
             super();
     
             this._func = func;
-            this._exposed = exposed;
+            this._dependencies = dependencies;
             this._thread = null;
             this._functionIndex = 0;
             this._functionReturn = {};
@@ -57,8 +58,8 @@ if(!process.env.ACCEDE_DISABLE_THREAD) {
             if(ret) {
                 let script = '';
 
-                for(let i in this._exposed) {
-                    script += this._exposed[i].createScript();
+                for(let i in this._dependencies) {
+                    script += this._dependencies[i].createScript();
                 }
 
                 script += `(${threadMainEntrypoint})(async (thread, onerror, onmessage)=>{return (${this._func == null ? 'null' : this._func.toString()});});`;

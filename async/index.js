@@ -38,45 +38,6 @@ class Async {
         };
     }
 
-    static async defer(...callbacks) {
-        let length = callbacks.length,
-            promises = new Array(length),
-            i;
-        
-        for(i = 0; i < length; i++) {
-            if(Async.isPromise(callbacks[i])) {
-                promises[i] = callbacks[i];
-            }
-            else if(typeof callbacks[i] === 'function') {
-                promises[i] = callbacks[i]();
-            }
-            else {
-                throw new Error(`Invalid object with the type ${typeof callbacks[i]} was passed`);
-            }
-        }
-
-        return await Promise.all(promises);
-    }
-
-    static async chain(...callbacks) {
-        let length = callbacks.length,
-            data = new Array(length);
-
-        for(let i = 0; i < length; i++) {
-            if(Async.isPromise(callbacks[i])) {
-                data[i] = await callbacks[i];
-            }
-            else if (typeof callbacks[i] === 'function') {
-                data[i] = await callbacks[i]();
-            }
-            else {
-                throw new Error(`Invalid object with the type ${typeof callbacks[i]} was passed`);
-            }
-        }
-
-        return data;
-    }
-
     static async until(callback) {
         let p = callback;
 
