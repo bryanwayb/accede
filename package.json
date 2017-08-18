@@ -1,6 +1,6 @@
 {
   "name": "accede",
-  "version": "0.0.1-alpha-0",
+  "version": "0.0.1-alpha-1",
   "description": "The Accede library",
   "main": "index.js",
   "scripts": {
@@ -8,11 +8,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://bryanwayb@bitbucket.org/bryanwayb/accede.git"
+    "url": "https://github.com/bryanwayb/accede.git"
   },
   "author": "Bryan Way",
   "license": "MIT",
-  "homepage": "https://bitbucket.org/bryanwayb/accede#readme",
+  "homepage": "https://github.com/bryanwayb/accede",
   "devDependencies": {
     "babel-core": "^6.25.0",
     "babel-plugin-transform-regenerator": "^6.24.1",
