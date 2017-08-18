@@ -5,6 +5,13 @@ if(!process.env.ACCEDE_DISABLE_THREAD) {
     
     class Pool {
         constructor(maxConcurrent = 1, threadCount = window.navigator.hardwareConcurrency || 1) {
+            if(maxConcurrent < 1) {
+                throw new Error('Max concurrent thread operations must be at least 1 or greater');
+            }
+            else if(threadCount < 1) {
+                throw new Error('Pool thread count must be 1 or greater');
+            }
+
             this._mutex = new Array(threadCount);
             this._maxConcurrent = maxConcurrent;
             this._threadFinished = [];
