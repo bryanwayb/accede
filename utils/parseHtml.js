@@ -1,19 +1,6 @@
 'use strict';
 
-const defaultCallbacks = {
-    onText: (text) => {
-        console.log(`Text node: ${text}`);
-    },
-    onOpenTag: (tag) => {
-        console.log(`Open tag node: ${tag}`);
-    },
-    onCloseTag: (tag) => {
-        console.log(`Close tag node: ${tag}`);
-    },
-    onAttribute: (name, value) => {
-        console.log(`Attribute: ${name} = ${value}`);
-    }
-};
+const defaultCallbacks = {};
 
 const whiteSpaceRegex = /\s/;
 
@@ -87,9 +74,22 @@ module.exports = (input, callbacks = {}) => {
             if(i === nextPos) {
                 throw new Error(`Illegal syntax in HTML at index ${i}, no tag name is present`);
             }
+
+            let selfCloseMatch = input.slice(i, nextClose + 1).match(/\/\s*>/),
+                selfClosed = false;
+
+            if(selfCloseMatch && (i + selfCloseMatch.index + selfCloseMatch[0].length - 1) === nextClose) {
+                selfClosed = true;
+            }
             
             if(typeof callbacks.onOpenTag === 'function') {
-                callbacks.onOpenTag(input.slice(i, nextPos));
+                let name = input.slice(i, nextPos);
+
+                if(name[name.length - 1] === '/') {
+                    name = name.slice(0, name.length - 1);
+                }
+
+                callbacks.onOpenTag(name, selfClosed);
             }
 
             nextPos++;
@@ -101,24 +101,36 @@ module.exports = (input, callbacks = {}) => {
                 throw new Error(`Illegal syntax in HTML at index ${i}, missing closing '>'`);
             }
 
+            let selfCloseMatch = input.slice(i, nextPos + 1).match(/\/\s*>/);
+
             if(typeof callbacks.onAttribute === 'function') {
-                let attributes = input.slice(i, nextPos),
+                let attributes = input.slice(i, selfCloseMatch ? i + selfCloseMatch.index : nextPos).trim(),
                     currentName = null;
 
                 for(let o = 0; o < attributes.length;) {
                     if(currentName === null) {
                         let nameEndPos = attributes.indexOf('=', o),
+                            nextWhiteSpacePos = nextWhiteSpace(attributes, o),
                             nameOnly = false;
 
                         if(nameEndPos === -1) {
-                            nameEndPos = Math.max(nextWhiteSpace(attributes, o), attributes.length);
+                            nameEndPos = nextWhiteSpacePos;
+
+                            if(nameEndPos === -1) {
+                                nameEndPos = attributes.length;
+                            }
+
+                            nameOnly = true;
+                        }
+                        else if(nextWhiteSpacePos !== -1 && nextWhiteSpacePos < nameEndPos) {
+                            nameEndPos = nextWhiteSpacePos;
                             nameOnly = true;
                         }
 
                         currentName = attributes.slice(o, nameEndPos).trim();
 
                         if(currentName.length === 0) {
-                            throw new Error(`Illegal syntax in HTML at index ${i}, missing attribute name`);
+                            throw new Error(`Illegal syntax in HTML at index ${o}, missing attribute name`);
                         }
 
                         if(nameOnly) {
@@ -129,40 +141,39 @@ module.exports = (input, callbacks = {}) => {
                         o = nameEndPos + 1;
                     }
                     else {
-                        let startValuePos = attributes.indexOf('"', o),
-                            isDouble = true;
+                        let match = attributes.slice(o).match(/\s+/),
+                            startValuePos = o;
 
-                        if(startValuePos === -1) {
-                            startValuePos = attributes.indexOf('\'', o);
-                            isDouble = false;
+                        if(match != null && match.index === 0) {
+                            startValuePos = o + match[0].length;
                         }
 
-                        let endValuePos = startValuePos;
+                        let singleQuote = attributes[startValuePos] === '\'',
+                            doubleQuote = attributes[startValuePos] === '"',
+                            endValuePos = startValuePos;
 
-                        if(startValuePos !== -1) {
-                            startValuePos++;
-                            endValuePos = attributes.indexOf(isDouble ? '"' : '\'', startValuePos);
-
-                            if(endValuePos === -1) {
-                                throw new Error(`Illegal syntax in HTML at index ${i}, missing matching close quote`);
-                            }
+                        if(singleQuote) {
+                            endValuePos = attributes.indexOf('\'', ++startValuePos);
+                        }
+                        else if(doubleQuote) {
+                            endValuePos = attributes.indexOf('\"', ++startValuePos);
                         }
                         else {
-                            let match = attributes.slice(o).match(/\s+/);
-                            if(match != null) {
-                                startValuePos = o + match[0].length;
-                            }
-                            else { 
-                                startValuePos = o;
-                            }
+                            endValuePos = nextWhiteSpace(attributes, startValuePos);
 
-                            endValuePos = Math.max(nextWhiteSpace(attributes, startValuePos), attributes.length);
+                            if(endValuePos === -1) {
+                                endValuePos = attributes.length;
+                            }
+                        }
+
+                        if(endValuePos === -1) {
+                            throw new Error(`Illegal syntax in HTML at index ${o}, missing attribute end value signal`);
                         }
 
                         callbacks.onAttribute(currentName, attributes.slice(startValuePos, endValuePos));
                         currentName = null;
 
-                        o = endValuePos + 1;
+                        o = endValuePos + (singleQuote || doubleQuote ? 2 : 1);
                     }
                 }
             }
