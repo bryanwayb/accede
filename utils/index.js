@@ -1,5 +1,6 @@
 'use strict';
 
 module.exports = {
-    Emitter: require('./Emitter')
+    Emitter: require('./Emitter'),
+    parseHtml: require('./parseHtml')
 };
