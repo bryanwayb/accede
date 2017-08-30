@@ -1,6 +1,22 @@
 'use strict';
 
-const defaultCallbacks = {};
+const defaultCallbacks = {
+    // onText: (text) => {
+    //     console.log(`Text node: ${text}`);
+    // },
+    // onOpenTag: (tag) => {
+    //     console.log(`Open tag node: ${tag}`);
+    // },
+    // onCloseTag: (tag) => {
+    //     console.log(`Close tag node: ${tag}`);
+    // },
+    // onAttribute: (name, value) => {
+    //     console.log(`Attribute: ${name} = ${value}`);
+    // },
+    // onComment: (text) => {
+    //     console.log(`Comment: ${text}`);
+    // }
+};
 
 const whiteSpaceRegex = /\s/;
 
@@ -14,6 +30,31 @@ function nextWhiteSpace(input, offset = 0) {
     return -1;
 }
 
+const specialTextEndLookup = {
+    'script': (input, index) => {
+        let scriptTagRegex = /<\s*?\/\s*script/i,
+            match = scriptTagRegex.exec(input.slice(index));
+
+        if(match != null) {
+            return match.index + index;
+        }
+        else {
+            return -1;
+        }
+    },
+    'style': (input, index) => {
+        let styleTagRegex = /<\s*?\/\s*style/i,
+            match = styleTagRegex.exec(input.slice(index));
+
+        if(match != null) {
+            return match.index + index;
+        }
+        else {
+            return -1;
+        }
+    }
+};
+
 module.exports = (input, callbacks = {}) => {
     if(input == null) {
         throw new Error('Input cannot be null or undefined');
@@ -26,13 +67,21 @@ module.exports = (input, callbacks = {}) => {
     // 1 = Starting Element Tag
     // 2 = Attributes
     // 3 = End element tag
-    let state = 0;
+    // 4 = HTML special tags ('<!' prefixes)
+    let state = 0,
+        specialText = null;
 
     for(let i = 0; i < input.length;) {
         let nextPos;
 
         if(state === 0) { // In text node
-            nextPos = input.indexOf('<', i);
+            if(specialText != null) {
+                nextPos = specialText(input, i);
+                specialText = null;
+            }
+            else {
+                nextPos = input.indexOf('<', i);
+            }
 
             if(nextPos === -1) {
                 nextPos = input.length;
@@ -53,6 +102,10 @@ module.exports = (input, callbacks = {}) => {
 
             if(input[i] === '/') { // Is this a closing tag?
                 state = 3; // Move to closing tag parsing
+                continue;
+            }
+            else if(input[i] === '!') {
+                state = 4; // Move to special HTML tag parsing
                 continue;
             }
 
@@ -90,6 +143,10 @@ module.exports = (input, callbacks = {}) => {
                 }
 
                 callbacks.onOpenTag(name, selfClosed);
+
+                if(specialTextEndLookup[name] != null) {
+                    specialText = specialTextEndLookup[name];
+                }
             }
 
             nextPos++;
@@ -194,10 +251,44 @@ module.exports = (input, callbacks = {}) => {
             state = 0;
             
             if(typeof callbacks.onCloseTag === 'function') {
-                callbacks.onCloseTag(input.slice(i, nextPos));
+                let closeTagName = input.slice(i, nextPos).trim();
+
+                if(nextWhiteSpace(closeTagName) !== -1) {
+                    throw new Error(`Illegal syntax in HTML at index ${i}, closing tag names cannot contain spaces`);
+                }
+
+                callbacks.onCloseTag(closeTagName);
             }
 
             nextPos++;
+        }
+        else if(state === 4) {
+            i++;
+
+            let sliced = input.slice(i);
+            if(sliced.startsWith('--')) {
+                nextPos = sliced.indexOf('-->');
+
+                let comment = null;
+
+                if(nextPos === -1) {
+                    comment = sliced.slice(2).trim();
+                    nextPos = input.length;
+                }
+                else {
+                    comment = sliced.slice(2, nextPos).trim();
+                    nextPos += i + 3;
+                }
+
+                if(typeof callbacks.onComment === 'function') {
+                    callbacks.onComment(comment);
+                }
+            }
+            else {
+                nextPos++;
+            }
+
+            state = 0;
         }
 
         i = nextPos;
