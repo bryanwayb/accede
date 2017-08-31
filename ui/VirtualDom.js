@@ -11,6 +11,13 @@ function _renderNode(child) {
     else {
         node = document.createElement(child.e);
 
+        if(child.a) {
+            for(let i = 0; i < child.a.length; i++) {
+                node.setAttribute(child.a[i].n, child.a[i].av);
+                child.a[i]._ = node;
+            }
+        }
+
         if(child.c && child.c.length) {
             let childNodes = _renderTree(child.c);
             for(let i = 0; i < childNodes.length; i++) {
@@ -64,13 +71,22 @@ function _findDiffs(left, right, diff, path) {
                     rightKeys = Object.keys(right),
                     found = {},
                     keys = [...leftKeys, ...rightKeys].filter((value) => {
-                        return found[value] ? false : (found[value] = true);
+                        return value !== 't' && found[value] ? false : (found[value] = true);
                     });
                 
-                for(let i = 0; i < keys.length; i++) {
-                    let key = keys[i];
-                    if(key !== '_') { // Ignore nodes
-                        _findDiffs(left[key], right[key], diff, [...path.slice(0), key]);
+                let typeChanged = false;
+                if(found.t) { // If the node type was changed (t), we're going to rebuild the entire node
+                    let preCount = diff.length;
+                    _findDiffs(left['t'], right['t'], diff, [...path.slice(0), 't']);
+                    typeChanged = diff.length !== preCount; // If changes were added we then the type was changed
+                }
+
+                if(!typeChanged) {
+                    for(let i = 0; i < keys.length; i++) {
+                        let key = keys[i];
+                        if(key !== '_') { // Ignore nodes
+                            _findDiffs(left[key], right[key], diff, [...path.slice(0), key]);
+                        }
                     }
                 }
             }
@@ -93,7 +109,7 @@ function _findDiffs(left, right, diff, path) {
 function _scopePath(elements, path) {
     let currentValue = elements,
         len = path.length - 1; // Don't include the last entry, we'll just get the parent object
-    for(let i = 0; i < len; i++) {
+    for(let i = 0; i < len && currentValue; i++) {
         currentValue = currentValue[path[i]];
     }
     return currentValue;
@@ -107,20 +123,49 @@ function _patchTree(elements, childrenA, childrenB) {
         let pathValue = _scopePath(childrenA, diff[i].p),
             valueProperty = diff[i].p[diff[i].p.length - 1];
 
-        if(diff[i].t === 0) {
-
-        }
-        else if(diff[i].t === 1) {
-
-        }
-        else if(diff[i].t === 2) {
-            if(Array.isArray(pathValue)) {
-
+        if(valueProperty && pathValue) {
+            if(diff[i].t === 0) {
+                
             }
-            else {
-                let updatedPathValue = _scopePath(childrenB, diff[i].p);
-                if(valueProperty === 'v') {
-                    pathValue._.nodeValue = updatedPathValue[valueProperty];
+            else if(diff[i].t === 1) {
+                if(pathValue._) {
+                }
+            }
+            else if(diff[i].t === 2) {
+                if(pathValue._) {
+                    if(Array.isArray(pathValue)) {
+                        
+                    }
+                    else {
+                        let updatedPathValue = _scopePath(childrenB, diff[i].p);
+                        if(valueProperty === 'v') { // Text node value changed
+                            pathValue._.nodeValue = updatedPathValue.v;
+                        }
+                        else if(valueProperty === 'av') { // Attribute value text changed
+                            pathValue._.setAttribute(updatedPathValue.n, updatedPathValue.av);
+                        }
+                        else if(valueProperty === 'n') { // Attribute name was changed
+                            pathValue._.removeAttribute(pathValue.n);
+                            pathValue._.setAttribute(updatedPathValue.n, updatedPathValue.av);
+                            delete pathValue.n;
+                            delete pathValue.av;
+                            delete pathValue._;
+                        }
+                        else if(valueProperty === 'e') { // Element changes
+                            pathValue._.replaceWith(_renderNode(updatedPathValue));
+                            delete pathValue.a;
+                            delete pathValue.c;
+                            delete pathValue.e;
+                            delete pathValue.s;
+                            delete pathValue._;
+                        }
+                        else if(valueProperty === 's') { // Self close element, remove all children
+                            while(pathValue._.firstChild) {
+                                pathValue._.removeChild(pathValue._.firstChild);
+                            }
+                            delete pathValue.c;
+                        }
+                    }
                 }
             }
         }
@@ -174,10 +219,10 @@ class VirtualDom {
                 nodePath.pop();
                 currentNode = nodePath[nodePath.length - 1];
             },
-            onAttribute: (name, value) => {
+            onAttribute: (name, value) => { // TODO: There's a bug here with self closed tags not getting attributes set
                 currentNode.a.push({
                     n: name,
-                    v: value
+                    av: value
                 });
             },
             onText: (text) => {
