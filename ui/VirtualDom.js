@@ -16,6 +16,7 @@ function _renderNode(child) {
                 node.setAttribute(child.a[i].n, child.a[i].av);
                 child.a[i]._ = node;
             }
+            child.a._ = node;
         }
 
         if(child.c && child.c.length) {
@@ -87,6 +88,9 @@ function _findDiffs(left, right, diff, path) {
                         if(key !== '_') { // Ignore nodes
                             _findDiffs(left[key], right[key], diff, [...path.slice(0), key]);
                         }
+                        else { // Copy _ values to new object
+                            right._ = left._;
+                        }
                     }
                 }
             }
@@ -106,16 +110,21 @@ function _findDiffs(left, right, diff, path) {
     }
 };
 
-function _scopePath(elements, path) {
+function _scopePath(elements, path, parent = true) {
     let currentValue = elements,
-        len = path.length - 1; // Don't include the last entry, we'll just get the parent object
+        len = path.length;
+        
+    if(parent) {
+        len--; // Don't include the last entry, we'll just get the parent object
+    }
+
     for(let i = 0; i < len && currentValue; i++) {
         currentValue = currentValue[path[i]];
     }
     return currentValue;
 }
 
-function _patchTree(elements, childrenA, childrenB) {
+function _patchTree(elementContainer, childrenA, childrenB) {
     let diff = [];
     _findDiffs(childrenA, childrenB, diff, []);
 
@@ -123,48 +132,63 @@ function _patchTree(elements, childrenA, childrenB) {
         let pathValue = _scopePath(childrenA, diff[i].p),
             valueProperty = diff[i].p[diff[i].p.length - 1];
 
-        if(valueProperty && pathValue) {
+        if(valueProperty != null && pathValue) {
             if(diff[i].t === 0) {
-                
+                let newPathValue = _scopePath(childrenB, diff[i].p, false);
+                if(Array.isArray(pathValue)) {
+                    if(newPathValue.n) { // New value is an attribute
+                        pathValue._.setAttribute(newPathValue.n, newPathValue.av);
+                    }
+                    else { // Node
+                        elementContainer.appendChild(_renderNode(newPathValue));
+                    }
+                }
+                else {
+                    debugger; // This should never happen because all node values should always be set at creation time
+                    // Putting a breakpoint just incase that changes
+                }
             }
             else if(diff[i].t === 1) {
-                if(pathValue._) {
+                let oldPathValue = pathValue[valueProperty];
+                
+                if(oldPathValue.n) { // Old value is attribute
+                    oldPathValue._.removeAttribute(oldPathValue.n);
                 }
+                else {
+                    elementContainer.removeChild(oldPathValue._);
+                }
+
+                delete pathValue[valueProperty];
             }
             else if(diff[i].t === 2) {
                 if(pathValue._) {
-                    if(Array.isArray(pathValue)) {
-                        
+                    let updatedPathValue = _scopePath(childrenB, diff[i].p);
+                    if(valueProperty === 'v') { // Text node value changed
+                        pathValue._.nodeValue = updatedPathValue.v;
                     }
-                    else {
-                        let updatedPathValue = _scopePath(childrenB, diff[i].p);
-                        if(valueProperty === 'v') { // Text node value changed
-                            pathValue._.nodeValue = updatedPathValue.v;
+                    else if(valueProperty === 'av') { // Attribute value text changed
+                        pathValue._.setAttribute(updatedPathValue.n, updatedPathValue.av);
+                    }
+                    else if(valueProperty === 'n') { // Attribute name was changed
+                        pathValue._.removeAttribute(pathValue.n);
+                        pathValue._.setAttribute(updatedPathValue.n, updatedPathValue.av);
+                        delete pathValue.n;
+                        delete pathValue.av;
+                        delete pathValue._;
+                    }
+                    else if(valueProperty === 'e') { // Element changes
+                        pathValue._.replaceWith(_renderNode(updatedPathValue));
+                        delete pathValue.a;
+                        delete pathValue.c;
+                        delete pathValue.e;
+                        delete pathValue.s;
+                        delete pathValue._;
+                    }
+                    else if(valueProperty === 's') { // Self close element, remove all children
+                        while(pathValue._.firstChild) {
+                            pathValue._.removeChild(pathValue._.firstChild);
                         }
-                        else if(valueProperty === 'av') { // Attribute value text changed
-                            pathValue._.setAttribute(updatedPathValue.n, updatedPathValue.av);
-                        }
-                        else if(valueProperty === 'n') { // Attribute name was changed
-                            pathValue._.removeAttribute(pathValue.n);
-                            pathValue._.setAttribute(updatedPathValue.n, updatedPathValue.av);
-                            delete pathValue.n;
-                            delete pathValue.av;
-                            delete pathValue._;
-                        }
-                        else if(valueProperty === 'e') { // Element changes
-                            pathValue._.replaceWith(_renderNode(updatedPathValue));
-                            delete pathValue.a;
-                            delete pathValue.c;
-                            delete pathValue.e;
-                            delete pathValue.s;
-                            delete pathValue._;
-                        }
-                        else if(valueProperty === 's') { // Self close element, remove all children
-                            while(pathValue._.firstChild) {
-                                pathValue._.removeChild(pathValue._.firstChild);
-                            }
-                            delete pathValue.c;
-                        }
+                        delete pathValue.c;
                     }
                 }
             }
@@ -244,7 +268,12 @@ class VirtualDom {
 
         if(!this.renderedTree) {
             this.renderedTree = this.tree;
-            this.renderedElements = _renderTree(this.tree.c);
+            this.renderedElements = document.createElement('span');
+
+            let elementArray = _renderTree(this.tree.c);
+            for(let i = 0; i < elementArray.length; i++) {
+                this.renderedElements.appendChild(elementArray[i]);
+            }
         }
         else {
             _patchTree(this.renderedElements, this.renderedTree.c, this.tree.c);
