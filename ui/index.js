@@ -1,5 +1,5 @@
 'use strict';
 
 module.exports = {
-    virtualDom: require('./virtualDom')
+    VirtualDom: require('./VirtualDom')
 };

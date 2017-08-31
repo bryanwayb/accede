@@ -4,8 +4,8 @@ const defaultCallbacks = {
     // onText: (text) => {
     //     console.log(`Text node: ${text}`);
     // },
-    // onOpenTag: (tag) => {
-    //     console.log(`Open tag node: ${tag}`);
+    // onOpenTag: (tag, selfClosed) => {
+    //     console.log(`Open tag node: ${tag}, selfClosed = ${selfClosed}`);
     // },
     // onCloseTag: (tag) => {
     //     console.log(`Close tag node: ${tag}`);
@@ -285,7 +285,7 @@ module.exports = (input, callbacks = {}) => {
                 }
             }
             else {
-                nextPos++;
+                nextPos = input.indexOf('>', i) + 1;
             }
 
             state = 0;
