@@ -1,8 +1,9 @@
 'use strict';
 
-const parseHtml = require('../utils/parseHtml');
+const parseHtml = require('../utils/parseHtml'),
+    Emitter = require('../utils/Emitter');
 
-function _renderNode(child) {
+function _renderNode(child, nodeCreatedCallback) {
     let node = null;
     
     if(child.t) {
@@ -20,7 +21,8 @@ function _renderNode(child) {
         }
 
         if(child.c && child.c.length) {
-            let childNodes = _renderTree(child.c);
+            let childNodes = _renderTree(child.c, nodeCreatedCallback);
+            child.c._ = node;
             for(let i = 0; i < childNodes.length; i++) {
                 node.appendChild(childNodes[i]);
             }
@@ -29,14 +31,16 @@ function _renderNode(child) {
 
     child._ = node;
 
+    nodeCreatedCallback(node);
+
     return node;
 }
 
-function _renderTree(children) {
+function _renderTree(children, nodeCreatedCallback) {
     let ret = new Array(children.length);
 
     for(let i = 0; i < children.length; i++) {
-        ret[i] = _renderNode(children[i]);
+        ret[i] = _renderNode(children[i], nodeCreatedCallback);
     }
 
     return ret;
@@ -124,7 +128,7 @@ function _scopePath(elements, path, parent = true) {
     return currentValue;
 }
 
-function _patchTree(elementContainer, childrenA, childrenB) {
+function _patchTree(elementContainer, childrenA, childrenB, nodeCreatedCallback) {
     let diff = [];
     _findDiffs(childrenA, childrenB, diff, []);
 
@@ -140,7 +144,7 @@ function _patchTree(elementContainer, childrenA, childrenB) {
                         pathValue._.setAttribute(newPathValue.n, newPathValue.av);
                     }
                     else { // Node
-                        elementContainer.appendChild(_renderNode(newPathValue));
+                        pathValue._.appendChild(_renderNode(newPathValue, nodeCreatedCallback));
                     }
                 }
                 else {
@@ -151,7 +155,10 @@ function _patchTree(elementContainer, childrenA, childrenB) {
             else if(diff[i].t === 1) {
                 let oldPathValue = pathValue[valueProperty];
                 
-                if(oldPathValue.n) { // Old value is attribute
+                if(pathValue.v) { // Old value was a text node
+                    pathValue._.parentNode.removeChild(pathValue._);
+                }
+                else if(oldPathValue.n) { // Old value is attribute
                     oldPathValue._.removeAttribute(oldPathValue.n);
                 }
                 else {
@@ -177,7 +184,7 @@ function _patchTree(elementContainer, childrenA, childrenB) {
                         delete pathValue._;
                     }
                     else if(valueProperty === 'e') { // Element changes
-                        pathValue._.replaceWith(_renderNode(updatedPathValue));
+                        pathValue._.replaceWith(_renderNode(updatedPathValue, nodeCreatedCallback));
                         delete pathValue.a;
                         delete pathValue.c;
                         delete pathValue.e;
@@ -190,14 +197,23 @@ function _patchTree(elementContainer, childrenA, childrenB) {
                         }
                         delete pathValue.c;
                     }
+                    else if(valueProperty === 't') { // Node type changed
+                        pathValue._.replaceWith(_renderNode(updatedPathValue, nodeCreatedCallback));
+
+                        delete pathValue.t;
+                        delete pathValue.v;
+                        delete pathValue._;
+                    }
                 }
             }
         }
     }
 }
 
-class VirtualDom {
+class VirtualDom extends Emitter {
     constructor(html = null) {
+        super();
+
         this.tree = null;
         this.renderedTree = null;
         this.renderedElements = null;
@@ -205,6 +221,10 @@ class VirtualDom {
         if(html != null) {
             this.loadHtml(html);
         }
+    }
+
+    attach(container) {
+        this.renderedElements = container;
     }
 
     loadHtml(html) {
@@ -222,7 +242,8 @@ class VirtualDom {
                     e: name,
                     s: selfClosed,
                     a: [],
-                    c: []
+                    c: [],
+                    t: false
                 };
 
                 currentNode.c.push(elementNode);
@@ -268,15 +289,20 @@ class VirtualDom {
 
         if(!this.renderedTree) {
             this.renderedTree = this.tree;
-            this.renderedElements = document.createElement('span');
 
-            let elementArray = _renderTree(this.tree.c);
+            if(this.renderedElements == null) {
+                this.renderedElements = document.createElement('span');
+            }
+
+            let elementArray = _renderTree(this.tree.c, (node) => this.emit('node', node));
+            this.tree.c._ = this.renderedElements;
+            
             for(let i = 0; i < elementArray.length; i++) {
                 this.renderedElements.appendChild(elementArray[i]);
             }
         }
         else {
-            _patchTree(this.renderedElements, this.renderedTree.c, this.tree.c);
+            _patchTree(this.renderedElements, this.renderedTree.c, this.tree.c, (node) => this.emit('node', node));
             this.renderedTree = this.tree;
         }
 
