@@ -3,22 +3,37 @@
 const Response = require('./Response'),
     Headers = require('./Headers');
 
-let FetchRequest = null && window.Request;
+let fetch = null;
+
+if(!process.env.ACCEDE_DISABLE_FETCH) {
+    fetch = window.fetch;
+}
 
 class Request {
-    constructor(url, method = 'get') {
+    constructor(url, method = 'get', headers = null, body = null) {
         this.url = url;
         this.method = method;
-        this.headers = new Headers();
+        this.body = body;
+
+        if(headers instanceof Headers) {
+            this.headers = headers;
+        }
+        else {
+            this.headers = new Headers(headers);
+        }
+
+        this._xhr = null;
+        this._controller = null;
     }
 
     fetch() {
-        return new Promise((resolve) => {
-            if(FetchRequest) {
-                resolve(fetch(new FetchRequest(this.url, {
+        return new Promise(async (resolve) => {
+            if(fetch) {
+                resolve(fetch(this.url, {
                     method: this.method,
-                    headers: this.headers.entries()
-                })).then((fetchResponse) => {
+                    headers: this.headers.entries(),
+                    body: await this.body
+                }).then((fetchResponse) => {
                     return new Response(this, fetchResponse);
                 }));
             }
@@ -37,9 +52,13 @@ class Request {
                     xhr.setRequestHeader(headerKeys[i], this.headers.get(headerKeys[i]));
                 }
 
-                xhr.send();
+                xhr.send(await this.body);
             }
         });
+    }
+
+    abort() {
+
     }
 }
 
