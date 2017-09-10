@@ -144,6 +144,29 @@ class Headers {
 
         return ret;
     }
+    
+    [Symbol.iterator]() {
+        let keys = this.keys(),
+            index = 0;
+        return {
+            next: () => {
+                let value = null,
+                    done = index >= keys.length;
+                    
+                if(!done) {
+                    value = {
+                        name: keys[index],
+                        value: this.get(keys[index++])
+                    }
+                }
+
+                return {
+                    value: value,
+                    done: done
+                };
+            }
+        }
+    }
 }
 
 module.exports = Headers;
