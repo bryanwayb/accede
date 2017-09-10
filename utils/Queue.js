@@ -6,14 +6,16 @@ class Queue extends Emitter {
     constructor() {
         super();
 
-        this.index = 0;
-        this.indexes = [];
-        this.callbackStack = {};
-        this.completeArgs = null;
+        this._private = {
+            index: 0,
+            indexes: [],
+            callbackStack: {},
+            completeArgs: null
+        };
     }
 
     get length() {
-        return this.indexes.length;
+        return this._private.indexes.length;
     }
 
     subscribe(callback, unsubscribedCallback = null) {
@@ -22,19 +24,19 @@ class Queue extends Emitter {
         }
 
         let ret = 0;
-        if(this.completeArgs != null) { // Queue has already been completed
+        if(this._private.completeArgs != null) { // Queue has already been completed
             new Promise((resolve) => {
-                callback.apply(null, this.completeArgs);
+                callback.apply(null, this._private.completeArgs);
                 resolve();
             });
         }
         else {
-            this.indexes.push(this.index);
-            this.callbackStack[this.index] = {
+            this._private.indexes.push(this._private.index);
+            this._private.callbackStack[this._private.index] = {
                 callback: callback,
                 unsubscribedCallback: unsubscribedCallback
             };
-            ret = this.index++;
+            ret = this._private.index++;
 
             this.emit('subscribed', ret, callback, unsubscribedCallback);
         }
@@ -43,16 +45,16 @@ class Queue extends Emitter {
     }
 
     unsubscribe(id) {
-        if(!process.env.production && this.callbackStack == null) {
+        if(!process.env.production && this._private.callbackStack == null) {
             throw new Error('Cannot unsubscribe from a queue that has already been completed');
         }
 
-        let indexPosition = this.indexes.indexOf(id),
+        let indexPosition = this._private.indexes.indexOf(id),
             ret = indexPosition !== -1;
 
         if(ret) {
-            this.indexes.splice(indexPosition, 1);
-            let toDelete = this.callbackStack[id];
+            this._private.indexes.splice(indexPosition, 1);
+            let toDelete = this._private.callbackStack[id];
 
             if(toDelete.unsubscribedCallback != null) {
                 toDelete.unsubscribedCallback();
@@ -60,7 +62,7 @@ class Queue extends Emitter {
 
             this.emit('unsubscribed', id, toDelete.callback, toDelete.unsubscribedCallback);
 
-            delete this.callbackStack[id];
+            delete this._private.callbackStack[id];
         }
         else if(!process.env.production) {
             throw new Error(`Subscription id ${id} was not found in queue`);
@@ -70,15 +72,15 @@ class Queue extends Emitter {
     }
 
     complete(...args) {
-        if(!process.env.production && this.callbackStack == null) {
+        if(!process.env.production && this._private.callbackStack == null) {
             throw new Error('Queue has already been completed');
         }
 
         let errors = [];
 
-        for(let i = 0; i < this.indexes.length; i++) {
+        for(let i = 0; i < this._private.indexes.length; i++) {
             try {
-                this.callbackStack[this.indexes[i]].callback.apply(null, args);
+                this._private.callbackStack[this._private.indexes[i]].callback.apply(null, args);
             }
             catch(ex) {
                 errors.push(ex);
@@ -87,11 +89,11 @@ class Queue extends Emitter {
 
         this.emit('completed', args);
 
-        delete this.callbackStack;
-        delete this.indexes;
-        delete this.index;
+        delete this._private.callbackStack;
+        delete this._private.indexes;
+        delete this._private.index;
 
-        this.completeArgs = args;
+        this._private.completeArgs = args;
 
         if(errors.length) {
             throw errors;
