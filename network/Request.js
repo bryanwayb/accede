@@ -7,7 +7,7 @@ const Response = require('./Response'),
 let fetch = null;
 
 if(!process.env.ACCEDE_DISABLE_FETCH) {
-    fetch = null;
+    fetch = window.fetch;
 }
 
 const RequestCacheEnum = {

@@ -17,6 +17,10 @@ class Queue extends Emitter {
     }
 
     subscribe(callback, unsubscribedCallback = null) {
+        if(!process.env.production && typeof callback !== 'function') {
+            throw new Error(`Callback must be a function, instead found ${typeof callback}`);
+        }
+
         let ret = 0;
         if(this.completeArgs != null) { // Queue has already been completed
             new Promise((resolve) => {
