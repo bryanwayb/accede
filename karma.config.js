@@ -6,9 +6,9 @@ module.exports = function(config) {
         logLevel: config.INFO,
         port: 9876,
         colors: true,
-        browsers: ['ChromeHeadless', 'PhantomJS', 'Firefox'],
+        browsers: ['ChromeHeadless', 'PhantomJS'],
         autoWatch: false,
-        // singleRun: false, // Karma captures browsers, runs the tests and exits
+        singleRun: true, // Karma captures browsers, runs the tests and exits
         concurrency: Infinity
     });
 };

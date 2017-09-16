@@ -34,7 +34,6 @@
     "grunt-shell": "^2.1.0",
     "karma": "^1.7.0",
     "karma-chrome-launcher": "^2.2.0",
-    "karma-firefox-launcher": "^1.0.1",
     "karma-nodeunit": "^0.2.0",
     "karma-phantomjs-launcher": "^1.0.4",
     "load-grunt-tasks": "^3.5.2",

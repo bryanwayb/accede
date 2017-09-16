@@ -1,22 +1,20 @@
 const accede = require('../../index.js');
 
-async function main() {
-    let req1 = new accede.network.Request('/testing'),
-        req2 = new accede.network.Request('/testing');
+let req1 = new accede.network.Request('/testing');
 
-    let req1Promise = req1.fetchQueue(),
-        req2Promise = req2.fetchQueue();
+req1.fetchQueue().then((response) => {
+    console.log(response);
+}, (error) => {
+    console.log(error);
+});
 
-    req1.abort();
-    //req2.abort();
+let req2 = new accede.network.Request('/testing');
 
-    let res1 = await req1Promise,
-        res2 = await req2Promise;
+req2.fetchQueue().then((response) => {
+    console.log(response);
+}, (error) => {
+    console.log(error);
+});
 
-    console.log(res1);
-    console.log(res2);
-
-    debugger;
-}
-
-main();
+req1.abort();
+req2.abort();

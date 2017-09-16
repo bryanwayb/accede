@@ -51,8 +51,8 @@ module.exports = function (grunt) {
         shell: {
             'test-primary-next': 'karma start --single-run --browsers ChromeHeadless karma.config.js',
             'test-primary-es5': 'karma start --single-run --browsers ChromeHeadless,PhantomJS karma.config.js',
-            'test-all-next': 'karma start --single-run --browsers ChromeHeadless,Firefox karma.config.js',
-            'test-all-es5': 'karma start --single-run --browsers ChromeHeadless,PhantomJS,Firefox karma.config.js'
+            'test-all-next': 'karma start --single-run --browsers ChromeHeadless karma.config.js',
+            'test-all-es5': 'karma start --single-run --browsers ChromeHeadless,PhantomJS karma.config.js'
         },
         copy: {
             'test-entrypoint': {

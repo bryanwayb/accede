@@ -4,12 +4,6 @@ const Response = require('./Response'),
     Headers = require('./Headers'),
     Queue = require('../utils/Queue');
 
-let fetch = null;
-
-if(!process.env.ACCEDE_DISABLE_FETCH) {
-    fetch = window.fetch;
-}
-
 const RequestCacheEnum = {
     Default: 'default',
     NoStore: 'no-store',
@@ -56,12 +50,20 @@ class Request {
     }
 
     _internalFetch(isRequesting) {
-        return new Promise(async (resolve, reject) => {
+        return new Promise((resolve, reject) => {
+            let fetch = null;
+            
+            if(!process.env.ACCEDE_DISABLE_FETCH) {
+                fetch = window.fetch;
+            }
+
             if(isRequesting) {
                 reject(new Error('Cannot execute multiple requests simultaneously with the same request object'));
             }
-
-            if(fetch) {
+            else if(this._private.aborted) {
+                resolve(null);
+            }
+            else if(fetch) {
                 let signal = null;
                 if(window.FetchController) {
                     this._private.controller = new FetchController();
@@ -93,7 +95,12 @@ class Request {
                     this._private.isRequesting = false;
                     this._private.controller = null;
 
-                    reject(error);
+                    if(this._private.aborted) {
+                        resolve(null);
+                    }
+                    else {
+                        reject(error);
+                    }
                 });
             }
             else {
@@ -118,7 +125,12 @@ class Request {
                         this._private.isRequesting = false;
                         this._private.xhr = null;
                         
-                        reject(new Error('A network error occurred'));
+                        if(this._private.aborted) {
+                            resolve(null);
+                        }
+                        else {
+                            reject(new Error('A network error occurred'));
+                        }
                     });
 
                     xhr.addEventListener('abort', () => {
@@ -252,41 +264,39 @@ class Request {
     }
 
     abort() {
-        if(!this._private.aborted) {
-            let shouldAbortRequest = true;
-            if(this._private.isQueued) {
-                if(this._private.isRequesting) {
-                    if(this._private.queue.length === 0) {
-                        delete requestQueue[this._private.queueKey]; // Remove from the global queue to prevent subscriptions to a aborted request
-                    }
-                    else {
-                        if(this._private.queue.listeners('unsubscribed') === 0) {
-                            this._private.queue.on('unsubscribed', () => {
-                                if(this._private.queue.length === 0) { // If there are no more subscriptions to this queue then it's safe to abort
-                                    this.abort();
-                                }
-                            });
-                        }
-                        shouldAbortRequest = false;
-                    }
+        let shouldAbortRequest = true;
+        if(this._private.isQueued) {
+            if(this._private.isRequesting) {
+                if(this._private.queue.length === 0) {
+                    delete requestQueue[this._private.queueKey]; // Remove from the global queue to prevent subscriptions to a aborted request
                 }
-                else if(this._private.queueId != null) {
-                    this._private.queue.unsubscribe(this._private.queueId);
+                else {
+                    if(this._private.queue.listeners('unsubscribed') === 0) {
+                        this._private.queue.on('unsubscribed', () => {
+                            if(this._private.queue.length === 0) { // If there are no more subscriptions to this queue then it's safe to abort
+                                this.abort();
+                            }
+                        });
+                    }
                     shouldAbortRequest = false;
                 }
             }
-    
-            if(shouldAbortRequest) {
-                if(this._private.controller) {
-                    this._private.controller.abort();
-                }
-                else if(this._private.xhr) {
-                    this._private.xhr.abort();
-                }
+            else if(this._private.queueId != null) {
+                this._private.queue.unsubscribe(this._private.queueId);
+                shouldAbortRequest = false;
             }
-    
-            this._private.aborted = true;
         }
+
+        if(shouldAbortRequest) {
+            if(this._private.controller) {
+                this._private.controller.abort();
+            }
+            else if(this._private.xhr) {
+                this._private.xhr.abort();
+            }
+        }
+
+        this._private.aborted = true;
     }
 }
 
