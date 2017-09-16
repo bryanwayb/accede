@@ -138,50 +138,6 @@ module.exports = {
             test.done();
         },
         'queued': async (test) => {
-            let request = new Request(window.location.href);
-    
-            let response = null;
-    
-            try {
-                response = await request.fetchQueue();
-                test.ok(response instanceof Response, 'Response should not be null when not rejected');
-            }
-            catch(ex) {
-                test.ok(false, 'Request for current URL failed');
-            }
-    
-            test.ok(response.statusText != null, 'Status text should not be null');
-            test.ok(response.status != null, 'Status code should not be null');
-            test.ok(response.headers != null, 'Response headers should not be null');
-            test.ok(response.ok, 'Request for the current URL should not have an error status code');
-            test.ok(Async.isPromise(response.body), 'Response body should always be a Promise object');
-            test.ok(await response.body, 'Request for the current URL was expected to return a result');
-    
-            request = new Request('/should-not-exist');
-    
-            try {
-                response = await request.fetchQueue();
-            }
-            catch(ex) {
-                test.ok(false, 'Request for a URL that does not exist should not throw an error');
-            }
-    
-            test.ok(response instanceof Response, 'Error responses should be instances of the Reponse class');
-    
-            test.equal(response.status, 404, 'Response code for a non-existent URL should be 404');
-            test.ok(!response.ok);
-    
-            request = new Request('http://0.0.0.0/invalid-url');
-    
-            try {
-                // Need to figure out why this is hanging
-                // response = await request.fetchQueue();
-                test.ok(false, 'An error should be thrown when an invalid request is made');
-            }
-            catch(ex) {
-                test.ok(true);
-            }
-    
             let count = 0;
             try {
                 await watchRequest(async () => {
