@@ -158,5 +158,142 @@ module.exports = {
     
             test.done();
         }
+    },
+    'aborting': {
+        'normal': async (test) => {
+            let request = new Request(window.location.href);
+
+            let responsePromise = request.fetch();
+
+            request.abort();
+
+            let response = await responsePromise;
+
+            test.ok(response == null, 'Aborted requests should always return a null response object');
+
+            test.done();
+        },
+        'queued': {
+            'req1 then req2': {
+                'abort req1 then req2': async (test) => {
+                    let req1 = new Request(window.location.href),
+                        req2 = new Request(window.location.href);
+                    
+                    let req1Promise = req1.fetchQueue(),
+                        req2Promise = req2.fetchQueue();
+    
+                    req1.abort();
+                    req2.abort();
+                    
+                    test.ok(await req1Promise == null, 'Request 1 expected to return null');
+                    test.ok(await req2Promise == null, 'Request 2 expected to return null');
+    
+                    test.done();
+                },
+                'abort req2 then req1': async (test) => {
+                    let req1 = new Request(window.location.href),
+                        req2 = new Request(window.location.href);
+                    
+                    let req1Promise = req1.fetchQueue(),
+                        req2Promise = req2.fetchQueue();
+    
+                    req2.abort();
+                    req1.abort();
+                    
+                    test.ok(await req1Promise == null, 'Request 1 expected to return null');
+                    test.ok(await req2Promise == null, 'Request 2 expected to return null');
+    
+                    test.done();
+                },
+                'abort req1': async (test) => {
+                    let req1 = new Request(window.location.href),
+                        req2 = new Request(window.location.href);
+                    
+                    let req1Promise = req1.fetchQueue(),
+                        req2Promise = req2.fetchQueue();
+    
+                    req1.abort();
+                    
+                    test.ok(await req1Promise == null, 'Request 1 expected to return null');
+                    test.ok(await req2Promise != null, 'Request 2 not expected to return null');
+    
+                    test.done();
+                },
+                'abort req2': async (test) => {
+                    let req1 = new Request(window.location.href),
+                        req2 = new Request(window.location.href);
+                    
+                    let req1Promise = req1.fetchQueue(),
+                        req2Promise = req2.fetchQueue();
+    
+                    req2.abort();
+                    
+                    test.ok(await req1Promise != null, 'Request 1 not expected to return null');
+                    test.ok(await req2Promise == null, 'Request 2 expected to return null');
+    
+                    test.done();
+                }
+            },
+            'req2 then req1': {
+                'abort req1 then req2': async (test) => {
+                    let req1 = new Request(window.location.href),
+                        req2 = new Request(window.location.href);
+                    
+                    let req2Promise = req2.fetchQueue(),
+                        req1Promise = req1.fetchQueue();
+    
+                    req1.abort();
+                    req2.abort();
+                    
+                    test.ok(await req1Promise == null, 'Request 1 expected to return null');
+                    test.ok(await req2Promise == null, 'Request 2 expected to return null');
+    
+                    test.done();
+                },
+                'abort req2 then req1': async (test) => {
+                    let req1 = new Request(window.location.href),
+                        req2 = new Request(window.location.href);
+                    
+                    let req2Promise = req2.fetchQueue(),
+                        req1Promise = req1.fetchQueue();
+    
+                    req2.abort();
+                    req1.abort();
+                    
+                    test.ok(await req1Promise == null, 'Request 1 expected to return null');
+                    test.ok(await req2Promise == null, 'Request 2 expected to return null');
+    
+                    test.done();
+                },
+                'abort req1': async (test) => {
+                    let req1 = new Request(window.location.href),
+                        req2 = new Request(window.location.href);
+                    
+                    let req2Promise = req2.fetchQueue(),
+                        req1Promise = req1.fetchQueue();
+    
+                    req1.abort();
+                    
+                    test.ok(await req1Promise == null, 'Request 1 expected to return null');
+                    test.ok(await req2Promise != null, 'Request 2 not expected to return null');
+    
+                    test.done();
+                },
+                'abort req2': async (test) => {
+                    let req1 = new Request(window.location.href),
+                        req2 = new Request(window.location.href);
+                    
+                    let req2Promise = req2.fetchQueue(),
+                        req1Promise = req1.fetchQueue();
+    
+                    req2.abort();
+                    
+                    test.ok(await req1Promise != null, 'Request 1 not expected to return null');
+                    test.ok(await req2Promise == null, 'Request 2 expected to return null');
+    
+                    test.done();
+                }
+            }
+        }
     }
 };
