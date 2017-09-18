@@ -6,7 +6,7 @@ if (!Element.prototype.matches) {
 
 class DOM {
     static select(sel, scope = window.document) {
-        let ret = sel;
+        let ret = null;
 
         if(typeof sel === 'string') {
             ret = null;
@@ -32,6 +32,21 @@ class DOM {
                 }
             }
         }
+        else if (Array.isArray(sel)) {
+            ret = sel[0];
+        }
+        else {
+            if (sel.length != null) { // Object is a fake array
+                ret = ret[0];
+            }
+            else {
+                ret = sel;
+            }
+        }
+
+        if(!ret) {
+            ret = null; // Always return null and not a falsy value
+        }
 
         return ret;
     }
@@ -53,16 +68,18 @@ class DOM {
                     ret.push(scopeIndex);
                 }
 
-                let selected = scopeIndex.querySelectorAll(sel);
+                if(scopeIndex.querySelectorAll) {
+                    let selected = scopeIndex.querySelectorAll(sel);
 
-                if (selected) {
-                    if (selected.length != null) {
-                        if (selected.length > 0) {
-                            Array.prototype.push.apply(ret, selected);
+                    if (selected) {
+                        if (selected.length != null) {
+                            if (selected.length > 0) {
+                                Array.prototype.push.apply(ret, selected);
+                            }
                         }
-                    }
-                    else {
-                        ret.push(selected);
+                        else {
+                            ret.push(selected);
+                        }
                     }
                 }
             }

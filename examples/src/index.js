@@ -1,20 +1,35 @@
 const accede = require('../../index.js');
 
-let req1 = new accede.network.Request('/testing');
+window.addEventListener('load', () => {
+    async function main() {
+        class TestingComponent extends accede.ui.Component {
+            constructor() {
+                super('<div id="container" onclick="this.test(event)">Testing Component<br /></div>The time is <span id="time"></span>', {
+                    events: ['click']
+                });
+            }
 
-req1.fetchQueue().then((response) => {
-    console.log(response);
-}, (error) => {
-    console.log(error);
+            onComponentReady() {
+                this.ids.time.innerText = new Date().toISOString();
+            }
+
+            test(event) {
+                console.log(this.ids.container);
+            }
+        }
+
+        class AnotherTestingComponent extends accede.ui.Component {
+            constructor() {
+                super(() => 'An example with HTML components<TestingComponent />');
+            }
+        }
+
+        accede.ui.Component.register(TestingComponent);
+        
+        let instance = new AnotherTestingComponent();
+        
+        instance.attach(window.document.body).render();
+    }
+    
+    main();
 });
-
-let req2 = new accede.network.Request('/testing');
-
-req2.fetchQueue().then((response) => {
-    console.log(response);
-}, (error) => {
-    console.log(error);
-});
-
-req1.abort();
-req2.abort();

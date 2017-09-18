@@ -1,7 +1,7 @@
 'use strict';
 
 const Headers = require('./Headers'),
-    Async = require('../async');
+    async = require('../async');
 
 class Response {
     constructor(request, rawResponseObject) {
@@ -15,7 +15,7 @@ class Response {
 
         if(rawResponseObject instanceof XMLHttpRequest) {
             this.url = rawResponseObject.responseURL;
-            this.body = Async.fromResult(rawResponseObject.responseText);
+            this.body = async.fromResult(rawResponseObject.responseText);
             this.status = rawResponseObject.status;
             this.statusText = rawResponseObject.statusText;
             this.headers = new Headers(rawResponseObject);
