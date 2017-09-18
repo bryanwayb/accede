@@ -1,7 +1,7 @@
 'use strict';
 
 const Headers = require('./Headers'),
-    Async = require('../Async');
+    Async = require('../async');
 
 class Response {
     constructor(request, rawResponseObject) {
