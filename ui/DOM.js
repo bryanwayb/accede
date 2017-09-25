@@ -32,16 +32,11 @@ class DOM {
                 }
             }
         }
-        else if (Array.isArray(sel)) {
+        else if (Array.isArray(sel) || sel.length != null) {
             ret = sel[0];
         }
         else {
-            if (sel.length != null) { // Object is a fake array
-                ret = ret[0];
-            }
-            else {
-                ret = sel;
-            }
+            ret = sel;
         }
 
         if(!ret) {

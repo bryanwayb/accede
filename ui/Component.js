@@ -1,48 +1,133 @@
 'use strict';
 
-const DOM = require('./DOM');
+const DOM = require('./DOM'),
+    Emitter = require('../utils/Emitter');
 
 const defaultOptions = {
     events: null
 };
 
-let registerElement = null,
+let defineElement = null,
     componentRegistry = null,
     componentRegistryNames = null;
 
-if(!process.env.ACCEDE_DISABLE_COMPONENT_REG && false) { // Testing
-    registerElement = document.registerElement;
+if(!process.env.ACCEDE_DISABLE_COMPONENT_REG) {
+    if((defineElement = window.customElements)) {
+        defineElement = defineElement.define.bind(defineElement);
+    }
+    else if((defineElement = document.registerElement)) {
+        defineElement = defineElement.bind(document);
+    }
 }
-else {
+
+if (!defineElement) {
     componentRegistry = {};
     componentRegistryNames = [];
 }
 
-class Component {
+function attributesToObject(element, observedAttributes) {
+    let attributes = {};
+
+    if(observedAttributes) {
+        for (let i = 0; i < observedAttributes.length; i++) {
+            attributes[observedAttributes[i]] = element.getAttribute(observedAttributes[i]);
+        }
+    }
+
+    return attributes;
+}
+
+class Component extends Emitter {
     constructor(template, options) {
+        super();
+
         this.template = template;
         this.options = Object.assign({}, defaultOptions, options);
 
         this.parentContainer = null;
         this.renderedElement = null;
-        this.ids = null;
+        this.nodes = null;
+        this.components = null;
 
         this._mutationListener = null;
         this._ignoreDOMEvents = false; // This is to prevent removing DOM elements when DOM events are raised by async methods
+        this._childComponents = null;
     }
 
-    static register(component, init = () => new component()) {
-        if(registerElement) {
+    static register(name, component, options = {}) {
+        options.init = options.init && typeof options.init === 'function' ? options.init : (() => new component());
+        options.attributes = options.attributes ? Array.from(options.attributes).map(v => (typeof v === 'string' ? v.toLowerCase() : null)).filter(v => v) : [];
 
+        if(!process.env.production && name.indexOf('-') === -1) {
+            throw new Error(`Error registering tag "${name}". Registered element names must contain a hyphen ("-") in their name`);
+        }
+
+        if(defineElement) {
+            class ComponentElement extends HTMLElement {
+                constructor() {
+                    super();
+
+                    this._init();
+                }
+
+                _init() {
+                    if(!this._initialized) {
+                        this._component = options.init(); // Create component
+                        this._connected = false;
+                        this._initialized = true;
+                    }
+                }
+
+                static get observedAttributes() {
+                    return options.attributes;
+                }
+
+                connectedCallback() {
+                    this._connected = true;
+                    this._component.attach(this).render(attributesToObject(this, options.attributes));
+                }
+
+                disconnectedCallback() {
+                    this._connected = false;
+                    this._component.detach();
+                }
+
+                attributeChangedCallback(name) {
+                    if(this._connected) {
+                        if(window.customElements
+                            || (options.attributes != null
+                                && options.attributes.indexOf(name.toLowerCase()) !== -1
+                            )) {
+                            this._component.render(attributesToObject(this, options.attributes));
+                        }
+                    }
+                }
+
+                // document.registerElement support
+
+                createdCallback() {
+                    this._init();
+                }
+
+                attachedCallback() {
+                    this.connectedCallback();
+                }
+
+                detachedCallback() {
+                    this.disconnectedCallback();
+                }
+            }
+
+            defineElement(name, ComponentElement);
         }
         else {
-            let name = component.name.toLowerCase();
+            name = name.toLowerCase();
 
             if(componentRegistry[name]) {
                 throw new Error(`Component with the name ${name} has already been registered`);
             }
 
-            componentRegistry[name] = init;
+            componentRegistry[name] = options;
             componentRegistryNames.push(name);
         }
 
@@ -104,29 +189,33 @@ class Component {
             ret = this.onDetaching();
         }
 
-        if(ret) {
-            if(this.listener) {
-                if(window.MutationObserver) {
-                    this.listener.disconnect();
-                }
-                else {
-                    this.parentContainer.removeEventListener('DOMNodeRemoved', this.listener);
-                }
+        if(ret !== false) {
+            this.emit('detaching');
+            
+            if(this._mutationListener) {
+                this._mutationListener.disconnect();
             }
 
             this.remove();
 
-            if(deleteElement) {
-                this.renderedElement = null;
-            }
-
+            this.renderedElement = null;
             this.parentContainer = null;
+
+            this.emit('detached');
         }
 
         return ret;
     }
 
     remove() {
+        if(this._childComponents != null) {
+            for(let i in this._childComponents) {
+                this._childComponents[i].detach();
+            }
+
+            this._childComponents = null;
+        }
+
         if(this.renderedElement != null) {
             for(let i = this.renderedElement.length - 1; i >= 0; i--) {
                 let renderedElement = this.renderedElement[i];
@@ -149,6 +238,10 @@ class Component {
     }
 
     async render(...args) {
+        if(this.onComponentRendering) {
+            await this.onComponentRendering.apply(this, args);
+        }
+
         let rendered = await this.template;
 
         if(typeof rendered === 'function') {
@@ -170,24 +263,43 @@ class Component {
             toSelect.push.apply(toSelect, this.options.events.map(v => `[on${v}]`));
         }
 
-        let subcomponentRenderPromises = null;
         if(componentRegistry != null) {
             toSelect.push.apply(toSelect, componentRegistryNames);
-            subcomponentRenderPromises = [];
         }
 
         let selected = DOM.selectAll(toSelect.join(','), rendered);
-        this.ids = {};
+
+        this.nodes = {};
+        this.components = {};
+
+        let childComponents = null;
+
+        this._ignoreDOMEvents = true;
 
         for(let i = 0; i < selected.length; i++) {
             let element = selected[i];
 
             if(componentRegistry != null) {
                 let name = element.tagName.toLowerCase(),
-                    componentInit = componentRegistry[name];
+                    componentInit = componentRegistry[name].init;
 
                 if(componentInit) {
-                    subcomponentRenderPromises.push(componentInit().attach(element).render());
+                    let instance = componentInit();
+
+                    if(childComponents == null) {
+                        childComponents = [];
+                    }
+
+                    childComponents.push(instance);
+
+                    instance.on('detached', () => {
+                        let index = childComponents.indexOf(instance);
+                        if(index !== -1) {
+                            childComponents.splice(index, 1);
+                        }
+                    });
+
+                    instance.attach(element).render(attributesToObject(element, options.attributes));
                 }
             }
 
@@ -215,22 +327,26 @@ class Component {
 
             let idAtrributeValue = element.getAttribute('id');
             if(idAtrributeValue != null) {
-                if(this.ids[idAtrributeValue] != null) {
-                    if(!Array.isArray(this.ids[idAtrributeValue])) {
-                        this.ids[idAtrributeValue] = [this.ids[idAtrributeValue]];
+                if(this.nodes[idAtrributeValue] != null) {
+                    if(!Array.isArray(this.nodes[idAtrributeValue])) {
+                        this.nodes[idAtrributeValue] = [this.nodes[idAtrributeValue]];
                     }
-                    this.ids[idAtrributeValue].push(element);
+                    this.nodes[idAtrributeValue].push(element);
                 }
                 else {
-                    this.ids[idAtrributeValue] = element;
+                    this.nodes[idAtrributeValue] = element;
                 }
+
+                let elementComponent = element._component;
+                if(elementComponent) {
+                    this.components[idAtrributeValue] = elementComponent;
+                }
+
+                element.removeAttribute('id');
             }
-            element.removeAttribute('id');
         }
 
         // Insert into the parent container
-
-        this._ignoreDOMEvents = true;
 
         while (this.parentContainer.firstChild) {
             this.parentContainer.removeChild(this.parentContainer.firstChild);
@@ -240,38 +356,15 @@ class Component {
             this.parentContainer.appendChild(rendered[i]);
         }
 
-        // Remove previous render is parent was changed
+        this.remove();
+        
+        this.renderedElement = rendered;
 
-        if(this.renderedElement
-            && this.renderedElement.parentElement !== this.parentContainer
-            && this.renderedElement !== rendered) {
-            for(let i = this.renderedElement.length - 1; i >= 0; i--) {
-                let renderedElement = this.renderedElement[i];
-
-                if(renderedElement.parentElement != null) {
-                    if(renderedElement.remove) {
-                        renderedElement.remove()
-                    }
-                    else if(renderedElement.removeNode) {
-                        try {
-                            renderedElement.removeNode(true);
-                        }
-                        catch(ex) {
-                            renderedElement.parentElement.removeChild(renderedElement);
-                        }
-                    }
-                }
-            }
-        }
-
+        this._childComponents = childComponents;
         this._ignoreDOMEvents = false;
 
         if(this.onComponentReady) {
-            await this.onComponentReady();
-        }
-
-        if(subcomponentRenderPromises && subcomponentRenderPromises.length) {
-            await Promise.all(subcomponentRenderPromises);
+            await this.onComponentReady.apply(this, ...args);
         }
     }
 }
