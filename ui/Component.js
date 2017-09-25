@@ -11,13 +11,11 @@ let defineElement = null,
     componentRegistry = null,
     componentRegistryNames = null;
 
-if(!process.env.ACCEDE_DISABLE_COMPONENT_REG) {
-    if((defineElement = window.customElements)) {
-        defineElement = defineElement.define.bind(defineElement);
-    }
-    else if((defineElement = document.registerElement)) {
-        defineElement = defineElement.bind(document);
-    }
+if(!process.env.ACCEDE_DISABLE_COMPONENT_CUST_ELEMENT && (defineElement = window.customElements)) {
+    defineElement = defineElement.define.bind(defineElement);
+}
+else if(!process.env.ACCEDE_DISABLE_COMPONENT_REG_ELEMENT && (defineElement = document.registerElement)) {
+    defineElement = defineElement.bind(document);
 }
 
 if (!defineElement) {
@@ -281,10 +279,10 @@ class Component extends Emitter {
 
             if(componentRegistry != null) {
                 let name = element.tagName.toLowerCase(),
-                    componentInit = componentRegistry[name].init;
+                    componentEntry = componentRegistry[name];
 
-                if(componentInit) {
-                    let instance = componentInit();
+                if(componentEntry) {
+                    let instance = componentEntry.init();
 
                     if(childComponents == null) {
                         childComponents = [];
@@ -299,7 +297,7 @@ class Component extends Emitter {
                         }
                     });
 
-                    instance.attach(element).render(attributesToObject(element, options.attributes));
+                    instance.attach(element).render(attributesToObject(element, componentEntry.attributes));
                 }
             }
 

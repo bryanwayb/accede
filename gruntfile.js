@@ -45,7 +45,8 @@ module.exports = function (grunt) {
                 }
             },
             babel: {
-                ACCEDE_DISABLE_THREAD: true
+                ACCEDE_DISABLE_THREAD: true,
+                ACCEDE_DISABLE_COMPONENT_CUST_ELEMENT: true
             }
         },
         shell: {
@@ -63,6 +64,11 @@ module.exports = function (grunt) {
             'index-entrypoint': {
                 files: {
                     '_index.js': ['index.js']
+                }
+            },
+            'dev-entrypoint': {
+                files: {
+                    'examples/src/_index.js': ['examples/src/index.js']
                 }
             }
         },
@@ -83,13 +89,20 @@ module.exports = function (grunt) {
                     'index.js'
                 ],
                 dest: '_index.js'
+            },
+            'dev-babel': {
+                src: [
+                    'babel.prefix.js',
+                    'examples/src/index.js'
+                ],
+                dest: 'examples/src/_index.js'
             }
         },
         browserify: {
             dev: {
                 files: {
                     'examples/build/index.js': [
-                        'examples/src/index.js'
+                        'examples/src/_index.js'
                     ]
                 }
             },
@@ -139,6 +152,11 @@ module.exports = function (grunt) {
             dist: {
                 files: {
                     'dist/accede.es5.js': ['dist/accede.es5.js']
+                }
+            },
+            dev: {
+                files: {
+                    'examples/build/index.js': ['examples/build/index.js']
                 }
             }
         },
@@ -227,15 +245,24 @@ module.exports = function (grunt) {
                 src: [
                     '_index.js'
                 ]
+            },
+            'dev-entrypoint': {
+                src: [
+                    'examples/src/_index.js'
+                ]
             }
         },
         watch: {
             options: {
                 spawn: false
             },
-            dev: {
+            'dev-next': {
                 files: sourceFiles,
-                tasks: ['dev']
+                tasks: ['dev:next']
+            },
+            'dev-es5': {
+                files: sourceFiles,
+                tasks: ['dev:es5']
             },
             test: {
                 files: [
@@ -254,9 +281,16 @@ module.exports = function (grunt) {
         }
     });
 
-    grunt.task.registerTask('default', ['dev', 'bgShell:dev', 'watch:dev']);
+    grunt.task.registerTask('default', ['example']);
 
-    grunt.task.registerTask('dev', ['reset:env', 'clean:dev', 'browserify:dev']);
+    grunt.task.registerTask('example', ['example:next']);
+    grunt.task.registerTask('example:next', ['dev:next', 'bgShell:dev', 'watch:dev-next']);
+    grunt.task.registerTask('example:es5', ['dev:es5', 'bgShell:dev', 'watch:dev-es5']);
+
+    grunt.task.registerTask('dev', ['dev:next']);
+    grunt.task.registerTask('dev:next', ['reset:env', 'clean:dev', 'copy:dev-entrypoint', 'browserify:dev', 'clean:dev-entrypoint']);
+    grunt.task.registerTask('dev:es5', ['reset:env', 'clean:dev', 'concat:dev-babel', 'env:babel', 'browserify:dev', 'clean:dev-entrypoint', 'babel:dev']);
+
     grunt.task.registerTask('dev:test', ['watch:test']);
 
     grunt.task.registerTask('dist', ['clean:dist', 'dist:next', 'dist:es5']);
