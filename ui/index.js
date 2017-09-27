@@ -2,6 +2,6 @@
 
 module.exports = {
     Component: require('./Component'),
-    Router: require('./Router'),
+    router: require('./router'),
     DOM: require('./DOM')
 };

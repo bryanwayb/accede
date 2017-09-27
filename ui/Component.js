@@ -143,6 +143,8 @@ class Component extends Emitter {
             throw new Error('Attempted to attach to a null parent');
         }
 
+        this.emit('attaching');
+
         this.parentContainer = DOM.select(container);
 
         this._mutationListener = new MutationObserver((mutations) => {
@@ -178,6 +180,8 @@ class Component extends Emitter {
         this._mutationListener.observe(this.parentContainer, {
             childList: true
         });
+
+        this.emit('attached');
 
         return this;
     }
@@ -217,6 +221,8 @@ class Component extends Emitter {
         }
 
         if(this.renderedElement != null) {
+            this.emit('removing');
+
             for(let i = this.renderedElement.length - 1; i >= 0; i--) {
                 let renderedElement = this.renderedElement[i];
 
@@ -234,10 +240,14 @@ class Component extends Emitter {
                     }
                 }
             }
+
+            this.emit('removed');
         }
     }
 
     async render(...args) {
+        this.emit.apply(this, ['rendering', ...args]);
+        
         if(this.onComponentRendering) {
             await this.onComponentRendering.apply(this, args);
         }
@@ -366,6 +376,8 @@ class Component extends Emitter {
         if(this.onComponentReady) {
             await this.onComponentReady.apply(this, ...args);
         }
+
+        this.emit.apply(this, ['rendered', ...args]);
     }
 }
 
